@@ -1,0 +1,199 @@
+@model SmartClinic.Web.Models.PatientMedicalProfile
+@{
+    ViewData["Title"] = "รายงานเวชระเบียนผู้รับบริการ";
+    string DateText(DateOnly? date) => date.HasValue ? date.Value.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("th-TH")) : "-";
+    string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+    string BarcodeText(string? value)
+    {
+        var digits = new string((value ?? string.Empty).Where(char.IsDigit).ToArray());
+        return digits.Length > 0 ? $"* {string.Join(" ", digits.Select(x => x.ToString()))} *" : "* *";
+    }
+    var hasPdf = Model.SourcePdfData is { Length: > 0 };
+    var logoUrl = ViewBag.LogoUrl as string;
+    var patientPhotoUrl = ViewBag.PatientPhotoUrl as string;
+    var patientSignatureUrl = ViewBag.PatientSignatureUrl as string;
+    var providerSignatureUrl = ViewBag.ProviderSignatureUrl as string;
+    var providerName = ViewBag.ProviderName as string;
+    var providerTitle = ViewBag.ProviderTitle as string;
+}
+
+<div class="d-print-none d-flex justify-content-between align-items-center mb-3">
+    <a class="btn btn-outline-secondary" asp-action="Index">กลับ</a>
+    <div class="d-flex gap-2">
+        @if (hasPdf)
+        {
+            <button type="button" class="btn btn-outline-secondary" data-preview-pdf-url="@Url.Action("Preview", "PatientMedicalProfiles", new { id = Model.Id })">พรีวิวต้นฉบับ</button>
+        }
+        <button type="button" class="btn btn-primary" onclick="window.print()">พิมพ์รายงาน</button>
+    </div>
+</div>
+
+<section class="profile-report-sheet">
+    <div class="profile-form-top">
+        <div>
+            <div>เลขประจำตัวผู้รับบริการ</div>
+            <div class="profile-form-small-box">@Display(Model.ServiceRecipientId)</div>
+        </div>
+        <div>
+            <div>วันที่ให้ข้อมูล</div>
+            <div class="profile-form-date">@DateText(Model.InformationGivenDate)</div>
+        </div>
+    </div>
+
+    <div class="profile-form-patient-photo">
+        <img src="@patientPhotoUrl" alt="รูปผู้ป่วย" />
+    </div>
+
+    <div class="profile-form-title">
+        <img src="@logoUrl" alt="โลโก้คลินิก" class="profile-form-logo" />
+        <h1>เวชระเบียนผู้รับบริการ</h1>
+        <div class="clinic-name">@Display(Model.ClinicName)</div>
+        <div>@Display(Model.ClinicAddress)</div>
+    </div>
+
+    <div class="profile-form-section">
+        <h2>ข้อมูลและประวัติผู้รับบริการ (Patient Profile)</h2>
+        <div class="profile-form-grid">
+            <div><span>ชื่อ-สกุล</span> <strong>@Display(Model.PatientName)</strong></div>
+            <div><span>เพศ</span> <strong>@Display(Model.Gender)</strong></div>
+            <div><span>วัน/เดือน/ปีเกิด</span> <strong>@DateText(Model.BirthDate)</strong></div>
+            <div><span>เลขบัตรประชาชน</span> <strong>@Display(Model.CitizenId)</strong></div>
+            <div><span>เชื้อชาติ</span> <strong>@Display(Model.Race)</strong></div>
+            <div><span>สัญชาติ</span> <strong>@Display(Model.Nationality)</strong></div>
+            <div><span>สถานภาพ</span> <strong>@Display(Model.MaritalStatus)</strong></div>
+            <div><span>เบอร์โทรศัพท์</span> <strong>@Display(Model.PhoneNumber)</strong></div>
+        </div>
+    </div>
+
+    <div class="profile-form-section">
+        <h2>ที่อยู่</h2>
+        <p><strong>ตามบัตรประชาชน:</strong> @Display(Model.RegisteredAddress)</p>
+        <p><strong>ที่สามารถติดต่อได้:</strong> @Display(Model.ContactAddress)</p>
+    </div>
+
+    <div class="profile-form-section">
+        <h2>ประวัติสุขภาพและสิทธิ</h2>
+        <p><strong>โรคประจำตัว:</strong> @Display(Model.UnderlyingDisease)</p>
+        <p><strong>โรงพยาบาล / หน่วยบริการประจำ:</strong> @Display(Model.PrimaryHospital)</p>
+        <p><strong>ประวัติเจ็บป่วยในอดีต:</strong> @Display(Model.PastHistory)</p>
+        <p><strong>ประวัติครอบครัว:</strong> @Display(Model.FamilyHistory)</p>
+        <p><strong>ประวัติแพ้ยา/อาหาร/สารเคมี:</strong> @Display(Model.AllergyHistory)</p>
+        <p><strong>สิทธิการรักษาพยาบาล:</strong> @Display(Model.MedicalBenefit)</p>
+    </div>
+
+    <div class="profile-form-section">
+        <h2>กรณีฉุกเฉิน</h2>
+        <div class="profile-form-grid">
+            <div><span>ผู้ติดต่อ</span> <strong>@Display(Model.EmergencyContactName)</strong></div>
+            <div><span>เบอร์โทรศัพท์</span> <strong>@Display(Model.EmergencyContactPhone)</strong></div>
+        </div>
+    </div>
+
+    <div class="profile-form-signatures">
+        <div class="signature-line">
+            @if (!string.IsNullOrWhiteSpace(patientSignatureUrl))
+            {
+                <img class="profile-form-signature-img" src="@patientSignatureUrl" alt="ลายมือชื่อผู้รับบริการ" />
+            }
+            <div class="line"></div>
+            <div>ลายมือชื่อผู้รับบริการ</div>
+            <div>( @Display(Model.PatientName) )</div>
+        </div>
+        <div class="signature-line">
+            @if (!string.IsNullOrWhiteSpace(providerSignatureUrl))
+            {
+                <img class="profile-form-signature-img" src="@providerSignatureUrl" alt="ลายมือชื่อผู้ให้บริการ" />
+            }
+            <div class="line"></div>
+            <div>ลายมือชื่อพยาบาลผู้ให้บริการ</div>
+            <div>( @Display(providerName) )</div>
+            <div class="profile-form-provider-title">@Display(providerTitle)</div>
+        </div>
+    </div>
+
+    <div class="profile-form-barcode">
+        @Html.Raw(RenderCode39Svg(Model.CitizenId))
+        <div>@BarcodeText(Model.CitizenId)</div>
+    </div>
+</section>
+
+<div class="modal fade" id="profilePdfPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">พรีวิว PDF ต้นฉบับ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="profilePdfPreviewFrame" style="width:100%;height:78vh;border:0;" title="PDF preview"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string RenderCode39Svg(string? value)
+    {
+        var patterns = new Dictionary<char, string>
+        {
+            ['0'] = "nnnwwnwnn",
+            ['1'] = "wnnwnnnnw",
+            ['2'] = "nnwwnnnnw",
+            ['3'] = "wnwwnnnnn",
+            ['4'] = "nnnwwnnnw",
+            ['5'] = "wnnwwnnnn",
+            ['6'] = "nnwwwnnnn",
+            ['7'] = "nnnwnnwnw",
+            ['8'] = "wnnwnnwnn",
+            ['9'] = "nnwwnnwnn",
+            ['*'] = "nwnnwnwnn"
+        };
+
+        var digits = new string((value ?? string.Empty).Where(char.IsDigit).ToArray());
+        var barcodeValue = $"*{digits}*";
+        if (digits.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        const int narrow = 2;
+        const int wide = 5;
+        const int height = 42;
+        var x = 0;
+        var bars = new System.Text.StringBuilder();
+
+        foreach (var character in barcodeValue)
+        {
+            if (!patterns.TryGetValue(character, out var pattern))
+            {
+                continue;
+            }
+
+            for (var i = 0; i < pattern.Length; i++)
+            {
+                var width = pattern[i] == 'w' ? wide : narrow;
+                if (i % 2 == 0)
+                {
+                    bars.Append($"<rect x='{x}' y='0' width='{width}' height='{height}' fill='#111' />");
+                }
+                x += width;
+            }
+
+            x += narrow;
+        }
+
+        return $"<svg xmlns='http://www.w3.org/2000/svg' width='{x}' height='{height}' viewBox='0 0 {x} {height}' role='img' aria-label='Code 39 barcode'>{bars}</svg>";
+    }
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('click', function (event) {
+            const trigger = event.target.closest('[data-preview-pdf-url]');
+            if (!trigger) return;
+            const frame = document.getElementById('profilePdfPreviewFrame');
+            if (frame) frame.src = trigger.getAttribute('data-preview-pdf-url');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('profilePdfPreviewModal')).show();
+        });
+    </script>
+}

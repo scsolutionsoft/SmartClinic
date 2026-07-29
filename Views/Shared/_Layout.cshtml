@@ -1,0 +1,149 @@
+﻿@{
+    var selectedTheme = Context.Request.Cookies["smartclinic.theme"] ?? "lux";
+    var themeOptions = new[] { "lux", "flatly", "minty", "journal", "materia", "morph", "cosmo", "litera", "pulse", "sandstone", "simplex", "spacelab", "united", "yeti", "zephyr" };
+    var themeLink = $"https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/{selectedTheme}/bootstrap.min.css";
+    var isAuthenticated = Context.User.Identity?.IsAuthenticated ?? false;
+    var displayName = Context.User.Identity?.Name ?? "Guest";
+    var currentController = (ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty);
+    string ActiveNav(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+}
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SmartClinic</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="@themeLink" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/SmartClinic.Web.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="sticky-top">
+        <nav class="navbar navbar-expand-xl navbar-dark smartclinic-navbar shadow-sm mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand smartclinic-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <span class="brand-mark">SC</span>
+                    <span>SmartClinic</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#smartclinicMainNav" aria-controls="smartclinicMainNav"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div id="smartclinicMainNav" class="navbar-collapse collapse d-xl-flex justify-content-between align-items-xl-center gap-3">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Home")" asp-area="" asp-controller="Home" asp-action="Index">แดชบอร์ด</a>
+                        </li>
+                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @ActiveNav("Clinics")" asp-controller="Clinics" asp-action="Register">@(Context.User.IsInRole("SuperAdmin") ? "ลงทะเบียนคลินิก" : "ข้อมูลคลินิก")</a>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Patients")" asp-controller="Patients" asp-action="Index">ผู้ป่วย</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("MedicalRecords")" asp-controller="MedicalRecords" asp-action="Index">เวชระเบียน OPD</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("PatientMedicalProfiles")" asp-controller="PatientMedicalProfiles" asp-action="Index">เวชระเบียนผู้รับบริการ</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Signatures")" asp-controller="Signatures" asp-action="Index">ลายเซ็น</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Reports")" asp-controller="Reports" asp-action="Index">รายงาน</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Downloads")" asp-controller="Downloads" asp-action="Index">ดาวน์โหลด</a>
+                        </li>
+                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @ActiveNav("ClinicUsers")" asp-controller="ClinicUsers" asp-action="Index">ผู้ใช้คลินิก</a>
+                            </li>
+                        }
+                        @if (Context.User.IsInRole("SuperAdmin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @ActiveNav("NhssoMasters")" asp-controller="NhssoMasters" asp-action="Index">ข้อมูลหลัก สปสช.</a>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">นโยบายความเป็นส่วนตัว</a>
+                        </li>
+                    </ul>
+                    <form class="nav-tool d-flex align-items-center gap-2" asp-controller="Theme" asp-action="Set" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                        <label class="visually-hidden" for="themeSelect">Theme</label>
+                        <select id="themeSelect" name="theme" class="form-select form-select-sm theme-select" onchange="this.form.submit()">
+                            @foreach (var theme in themeOptions)
+                            {
+                                <option value="@theme" selected="@(string.Equals(theme, selectedTheme, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@theme</option>
+                            }
+                        </select>
+                    </form>
+                    <div class="nav-account d-flex gap-2">
+                        @if (isAuthenticated)
+                        {
+                            <span class="user-chip">@displayName</span>
+                            <a class="btn btn-sm btn-outline-light" asp-controller="Account" asp-action="ChangePassword">เปลี่ยนรหัสผ่าน</a>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-light">ออกจากระบบ</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn btn-sm btn-outline-light" asp-controller="Account" asp-action="Login">เข้าสู่ระบบ</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="app-shell container-fluid px-3 px-lg-4">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <partial name="_StatusModal" />
+
+    <footer class="border-top footer text-body-secondary py-3 mt-4">
+        <div class="container-fluid px-3 px-lg-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>&copy; 2569 - SmartClinic</div>
+            <div class="small">Ready with Bootswatch theme support</div>
+        </div>
+    </footer>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @if ((TempData["StatusModal"] as string) == "password-changed")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Account security',
+                    state: 'Updated',
+                    stateDescription: 'เปลี่ยนรหัสผ่านสำเร็จ',
+                    message: 'ระบบบันทึกรหัสผ่านใหม่เรียบร้อย และพร้อมใช้งานต่อ',
+                    meta: 'First-login security policy completed',
+                    actionText: 'Close',
+                    items: [
+                        { title: 'Password policy', detail: 'Initial password has been replaced', time: 'Done' },
+                        { title: 'Account status', detail: 'Must-change flag cleared', time: 'Done' }
+                    ]
+                });
+            });
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,185 @@
+@model ClinicRegistrationViewModel
+@{
+    ViewData["Title"] = Model.IsEditMode ? "ข้อมูลคลินิกของตนเอง" : "Clinic Register";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-8">
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body p-4 p-lg-5">
+                <h1 class="h3 fw-semibold mb-2">@(Model.IsEditMode ? "ข้อมูลคลินิกของตนเอง" : "ลงทะเบียนคลินิก")</h1>
+                <p class="text-body-secondary mb-4">
+                    @(Model.IsEditMode
+                        ? "แสดงข้อมูลคลินิกของผู้ใช้งานปัจจุบัน สามารถแก้ไขข้อมูลติดต่อ ธีม และโลโก้ของคลินิกตนเองเท่านั้น"
+                        : "เพิ่มคลินิกใหม่จากทะเบียน สปสช. เฉพาะผู้ดูแลระบบกลาง")
+                </p>
+                <form asp-action="Register" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="SelectedClinicCode" class="form-label"></label>
+                            @if (Model.CanCreateClinic && !Model.IsEditMode)
+                            {
+                                <select asp-for="SelectedClinicCode" class="form-select" id="nhssoClinicSelect">
+                                    <option value="">-- เลือกคลินิกจาก สปสช. --</option>
+                                    @foreach (var clinic in Model.NhssoClinics)
+                                    {
+                                        <option value="@clinic.ClinicCode" data-clinic-name="@clinic.ClinicName" data-clinic-address="@clinic.Address">@clinic.ClinicCode - @clinic.ClinicName</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input asp-for="SelectedClinicCode" class="form-control" readonly />
+                            }
+                            <span asp-validation-for="SelectedClinicCode" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ClinicName" class="form-label"></label>
+                            <input asp-for="ClinicName" class="form-control" id="clinicNameDisplay" readonly />
+                            <span asp-validation-for="ClinicName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label"></label>
+                            <input asp-for="FullName" class="form-control" />
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label"></label>
+                            <input asp-for="PhoneNumber" class="form-control" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label"></label>
+                            <input asp-for="Email" class="form-control" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6"></div>
+                        <div class="col-12">
+                            <label asp-for="Address" class="form-label"></label>
+                            <textarea asp-for="Address" class="form-control" rows="3" id="clinicAddressDisplay" readonly="@(!Model.IsEditMode ? "readonly" : null)"></textarea>
+                            <span asp-validation-for="Address" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Theme" class="form-label"></label>
+                            <select asp-for="Theme" class="form-select">
+                                <option value="lux">Lux</option>
+                                <option value="flatly">Flatly</option>
+                                <option value="minty">Minty</option>
+                                <option value="journal">Journal</option>
+                                <option value="materia">Materia</option>
+                                <option value="morph">Morph</option>
+                                <option value="cosmo">Cosmo</option>
+                                <option value="litera">Litera</option>
+                                <option value="pulse">Pulse</option>
+                                <option value="sandstone">Sandstone</option>
+                                <option value="simplex">Simplex</option>
+                                <option value="spacelab">Spacelab</option>
+                                <option value="united">United</option>
+                                <option value="yeti">Yeti</option>
+                                <option value="zephyr">Zephyr</option>
+                            </select>
+                            <span asp-validation-for="Theme" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Logo" class="form-label"></label>
+                            <input asp-for="Logo" type="file" class="form-control" />
+                            @if (!string.IsNullOrWhiteSpace(Model.CurrentLogoPath))
+                            {
+                                <div class="form-text">
+                                    โลโก้ปัจจุบัน:
+                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline"
+                                            data-logo-preview-url="@Model.CurrentLogoPath"
+                                            data-logo-preview-title="@Model.ClinicName">
+                                        เปิดดู
+                                    </button>
+                                </div>
+                            }
+                            <span asp-validation-for="Logo" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">@(Model.IsEditMode ? "บันทึกการแก้ไข" : "บันทึกลงทะเบียน")</button>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-lg">ยกเลิก</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="clinicLogoPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clinicLogoPreviewTitle">โลโก้คลินิก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center bg-body-tertiary">
+                <img id="clinicLogoPreviewImage" src="" alt="โลโก้คลินิก" class="img-fluid rounded border bg-white p-3" style="max-height:420px;object-fit:contain;" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const select = document.getElementById('nhssoClinicSelect');
+            const nameInput = document.getElementById('clinicNameDisplay');
+            const addressInput = document.getElementById('clinicAddressDisplay');
+
+            if (!select || !nameInput || !addressInput) {
+                return;
+            }
+
+            const syncClinicInfo = function () {
+                const selectedOption = select.options[select.selectedIndex];
+                if (!selectedOption) {
+                    return;
+                }
+
+                nameInput.value = selectedOption.dataset.clinicName || '';
+                addressInput.value = selectedOption.dataset.clinicAddress || '';
+            };
+
+            syncClinicInfo();
+            select.addEventListener('change', syncClinicInfo);
+        });
+
+        document.addEventListener('click', function (event) {
+            const trigger = event.target.closest('[data-logo-preview-url]');
+            if (!trigger) {
+                return;
+            }
+
+            const image = document.getElementById('clinicLogoPreviewImage');
+            const title = document.getElementById('clinicLogoPreviewTitle');
+            if (image) image.src = trigger.getAttribute('data-logo-preview-url') || '';
+            if (title) title.textContent = trigger.getAttribute('data-logo-preview-title') || 'โลโก้คลินิก';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('clinicLogoPreviewModal')).show();
+        });
+
+        @if ((TempData["ClinicStatus"] as string) == "updated")
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Clinic profile',
+                    state: 'Saved',
+                    stateDescription: 'บันทึกข้อมูลสำเร็จ',
+                    message: 'ระบบบันทึกข้อมูลคลินิกของคุณเรียบร้อยแล้ว',
+                    meta: '@Model.ClinicName',
+                    actionText: 'ตกลง',
+                    items: [
+                        { title: 'ข้อมูลคลินิก', detail: 'อัปเดตข้อมูลติดต่อ ธีม หรือโลโก้แล้ว', time: 'Done' }
+                    ]
+                });
+            });
+            </text>
+        }
+    </script>
+}

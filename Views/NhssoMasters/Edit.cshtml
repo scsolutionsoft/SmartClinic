@@ -1,0 +1,60 @@
+@model NhssoMasterEditViewModel
+@{
+    ViewData["Title"] = "Edit NHSO Master";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-body p-4 p-lg-5">
+                <h1 class="h3 fw-semibold mb-3">แก้ไขข้อมูลคลินิก สปสช.</h1>
+                <form asp-action="Edit" method="post" class="row g-3">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Id" type="hidden" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="col-md-4">
+                        <label asp-for="ClinicCode" class="form-label"></label>
+                        <input asp-for="ClinicCode" class="form-control" />
+                        <span asp-validation-for="ClinicCode" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="ClinicName" class="form-label"></label>
+                        <input asp-for="ClinicName" class="form-control" />
+                        <span asp-validation-for="ClinicName" class="text-danger"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Address" class="form-label"></label>
+                        <input asp-for="Address" class="form-control" />
+                        <span asp-validation-for="Address" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ContactPhone" class="form-label"></label>
+                        <input asp-for="ContactPhone" class="form-control" />
+                        <span asp-validation-for="ContactPhone" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ContactEmail" class="form-label"></label>
+                        <input asp-for="ContactEmail" class="form-control" />
+                        <span asp-validation-for="ContactEmail" class="text-danger"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">กลับหน้ารายการ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

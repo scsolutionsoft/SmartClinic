@@ -1,0 +1,244 @@
+@model NhssoMasterDashboardViewModel
+@{
+    ViewData["Title"] = "NHSO Master";
+}
+
+<section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+            <span class="badge bg-light text-dark mb-3">SuperAdmin</span>
+            <h1 class="display-5 fw-semibold mb-3">NHSO Clinic Master</h1>
+            <p class="lead mb-0">จัดการรายการคลินิกจาก สปสช. เพื่อให้ระบบลงทะเบียนใช้ข้อมูลทะเบียนกลางเท่านั้น</p>
+        </div>
+        <div class="col-lg-4">
+            <div class="glass-card p-3 p-lg-4 rounded-4">
+                <div class="fw-semibold mb-2">@Model.StatusMessage</div>
+                <div class="small opacity-75">- Import CSV</div>
+                <div class="small opacity-75">- Enable/Disable clinic</div>
+                <div class="small opacity-75">- 10-char alphanumeric code</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h2 class="h4 fw-semibold mb-3">เพิ่มรายการคลินิกด้วยตนเอง</h2>
+        <form asp-action="Create" method="post" class="row g-3 mb-4">
+            @Html.AntiForgeryToken()
+            <div class="col-md-3">
+                <label asp-for="CreateInput.ClinicCode" class="form-label"></label>
+                <input asp-for="CreateInput.ClinicCode" class="form-control" />
+                <span asp-validation-for="CreateInput.ClinicCode" class="text-danger"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="CreateInput.ClinicName" class="form-label"></label>
+                <input asp-for="CreateInput.ClinicName" class="form-control" />
+                <span asp-validation-for="CreateInput.ClinicName" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CreateInput.ContactPhone" class="form-label"></label>
+                <input asp-for="CreateInput.ContactPhone" class="form-control" />
+                <span asp-validation-for="CreateInput.ContactPhone" class="text-danger"></span>
+            </div>
+            <div class="col-md-8">
+                <label asp-for="CreateInput.Address" class="form-label"></label>
+                <input asp-for="CreateInput.Address" class="form-control" />
+                <span asp-validation-for="CreateInput.Address" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="CreateInput.ContactEmail" class="form-label"></label>
+                <input asp-for="CreateInput.ContactEmail" class="form-control" />
+                <span asp-validation-for="CreateInput.ContactEmail" class="text-danger"></span>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input asp-for="CreateInput.IsActive" class="form-check-input" />
+                    <label asp-for="CreateInput.IsActive" class="form-check-label"></label>
+                </div>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">เพิ่มรายการ</button>
+            </div>
+        </form>
+
+        <hr />
+
+        <h2 class="h4 fw-semibold mb-3">นำเข้าข้อมูลจาก CSV</h2>
+        <p class="text-body-secondary mb-3">รูปแบบคอลัมน์: ClinicCode,ClinicName,Address,ContactPhone,ContactEmail,IsActive</p>
+        <form asp-action="ImportCsv" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="col-md-8">
+                <label asp-for="ImportInput.CsvFile" class="form-label"></label>
+                <input asp-for="ImportInput.CsvFile" type="file" class="form-control" accept=".csv" />
+                <span asp-validation-for="ImportInput.CsvFile" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">Import NHSO CSV</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 fw-semibold mb-0">รายการคลินิก สปสช.</h2>
+            <span class="badge text-bg-light">@Model.Items.Count รายการ</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>รหัสคลินิก</th>
+                        <th>ชื่อคลินิก</th>
+                        <th>ที่อยู่</th>
+                        <th>ติดต่อ</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@item.ClinicCode</td>
+                            <td>@item.ClinicName</td>
+                            <td>@item.Address</td>
+                            <td>
+                                <div class="small">@item.ContactPhone</div>
+                                <div class="small text-body-secondary">@item.ContactEmail</div>
+                            </td>
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge text-bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">Disabled</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                <form asp-action="ToggleActive" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        @(item.IsActive ? "Disable" : "Enable")
+                                    </button>
+                                </form>
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('ยืนยันการลบรายการคลินิกนี้?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-body-secondary py-4">ยังไม่มีข้อมูลคลินิกใน master</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    @if ((TempData["StatusModal"] as string) == "nhsso-import")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'NHSO import',
+                    state: 'Completed',
+                    stateDescription: 'นำเข้าข้อมูลเสร็จสิ้น',
+                    message: 'ระบบอัปเดตข้อมูล master คลินิกจาก CSV เรียบร้อย',
+                    meta: 'Import workflow finished',
+                    actionText: 'Close',
+                    items: [
+                        { title: 'Inserted', detail: '@TempData["ImportCount"] records', time: 'Done' },
+                        { title: 'Updated', detail: '@TempData["UpdateCount"] records', time: 'Done' },
+                        { title: 'Invalid', detail: '@TempData["InvalidCount"] records', time: 'Checked' }
+                    ]
+                });
+            });
+        </script>
+    }
+
+    @if ((TempData["StatusModal"] as string) == "nhsso-create")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'NHSO master',
+                    state: 'Created',
+                    stateDescription: 'เพิ่มรายการสำเร็จ',
+                    message: 'เพิ่มคลินิกใหม่ใน NHSO master เรียบร้อย',
+                    meta: 'Manual create completed',
+                    actionText: 'Close'
+                });
+            });
+        </script>
+    }
+
+    @if ((TempData["StatusModal"] as string) == "nhsso-edit")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'NHSO master',
+                    state: 'Updated',
+                    stateDescription: 'แก้ไขสำเร็จ',
+                    message: 'ข้อมูลคลินิกถูกอัปเดตเรียบร้อย',
+                    meta: 'Edit completed',
+                    actionText: 'Close'
+                });
+            });
+        </script>
+    }
+
+    @if ((TempData["StatusModal"] as string) == "nhsso-delete")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'NHSO master',
+                    state: 'Deleted',
+                    stateDescription: 'ลบรายการสำเร็จ',
+                    message: 'ระบบลบข้อมูลคลินิกจาก master แล้ว',
+                    meta: 'Delete completed',
+                    actionText: 'Close'
+                });
+            });
+        </script>
+    }
+
+    @if ((TempData["StatusModal"] as string) == "nhsso-delete-blocked")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'warning',
+                    subtitle: 'NHSO master',
+                    state: 'Blocked',
+                    stateDescription: 'ไม่สามารถลบได้',
+                    message: 'รายการนี้มีการใช้งานอยู่ในข้อมูลคลินิก จึงไม่สามารถลบได้',
+                    meta: 'Referenced by Clinics table',
+                    actionText: 'Close'
+                });
+            });
+        </script>
+    }
+}

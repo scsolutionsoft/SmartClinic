@@ -1,0 +1,30 @@
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build output
+bin/
+obj/
+BridgePackageSource/**/bin/
+BridgePackageSource/**/obj/
+BridgePackageStage/
+
+## Local runtime data
+wwwroot/uploads/
+*.db
+*.db-shm
+*.db-wal
+
+## Logs and temp files
+logs/
+*.log
+*.tmp
+*.temp
+
+## OS files
+Thumbs.db
+.DS_Store

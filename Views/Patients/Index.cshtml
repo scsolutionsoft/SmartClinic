@@ -1,0 +1,313 @@
+@model PatientDashboardViewModel
+@{
+    ViewData["Title"] = "ลงทะเบียนผู้ป่วย";
+}
+
+<style>
+    .id-card-preview {
+        background: linear-gradient(135deg, #1a3a5c 0%, #0d6efd 60%, #0dcaf0 100%);
+        border-radius: 16px;
+        color: #fff;
+        padding: 1.25rem 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .id-card-preview::before {
+        content: '';
+        position: absolute; top: -40px; right: -40px;
+        width: 180px; height: 180px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.07);
+    }
+    .id-card-preview::after {
+        content: '';
+        position: absolute; bottom: -50px; left: 20px;
+        width: 140px; height: 140px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+    }
+    .patient-photo-ring {
+        width: 110px; height: 110px;
+        border-radius: 50%;
+        border: 3px solid #0d6efd;
+        background: #f0f4ff;
+        display: flex; align-items: center; justify-content: center;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .photo-placeholder { color: #adb5bd; }
+    .recent-patient-avatar {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #e9ecef;
+        display: flex; align-items: center; justify-content: center;
+        overflow: hidden; flex-shrink: 0;
+        font-size: 1.1rem; color: #6c757d;
+        border: 2px solid #dee2e6;
+    }
+    .recent-patient-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .reader-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .reader-dot.connected { background: #198754; box-shadow: 0 0 0 3px rgba(25,135,84,.2); }
+    .reader-dot.disconnected { background: #adb5bd; }
+    .reader-dot.error { background: #dc3545; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 fw-bold mb-1">ลงทะเบียนผู้ป่วย</h1>
+        <p class="text-body-secondary mb-0">อ่านข้อมูลจากบัตรประชาชนแล้วบันทึกเข้าระบบ</p>
+    </div>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-1 small">
+            <span class="reader-dot disconnected" id="readerDot"></span>
+            <span id="smartCardReaderStatus" class="text-body-secondary">กำลังตรวจสอบ...</span>
+        </div>
+        <button type="button" class="btn btn-outline-warning btn-sm" data-smartcard-restart="true">
+            <svg width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+            รีสตาร์ท Bridge
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT: Registration form -->
+    <div class="col-xl-7 col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form asp-action="Register" method="post" enctype="multipart/form-data" id="patientRegisterForm">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Input.ClinicCode" type="hidden" />
+                    <input type="hidden" id="patientPhotoBase64Input" name="Input.PhotoBase64" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 mb-3"></div>
+
+                    <div class="border rounded-3 p-3 mb-4 bg-body-tertiary">
+                        <label asp-for="Input.MedicalRecordPdf" class="form-label fw-semibold">ไฟล์ PDF เวชระเบียน</label>
+                        <div class="input-group">
+                            <input asp-for="Input.MedicalRecordPdf" class="form-control" type="file" accept="application/pdf" id="patientPdfFile" />
+                            <button type="button" class="btn btn-info text-white" data-pdf-import="true">
+                                <svg width="15" height="15" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM9.5 1v3A1.5 1.5 0 0 0 11 5.5h2"/></svg>
+                                อ่านข้อมูล PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Photo + main fields row -->
+                    <div class="d-flex gap-4 align-items-start mb-4">
+                        <div class="text-center">
+                            <div class="patient-photo-ring mx-auto mb-2">
+                                <span class="photo-placeholder" id="photoPlaceholderIcon">
+                                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/></svg>
+                                </span>
+                                <img id="patientPhotoPreview" src="" alt="รูปจากบัตร" style="display:none;width:100%;height:100%;object-fit:cover;" />
+                            </div>
+                            <div class="small text-body-secondary" id="photoSourceLabel">-</div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="mb-3">
+                                <label asp-for="Input.CitizenId" class="form-label fw-semibold"></label>
+                                <div class="input-group">
+                                    <input asp-for="Input.CitizenId" class="form-control" id="patientCitizenId"
+                                           placeholder="กรอกเลข 13 หลัก หรืออ่านจากบัตร" maxlength="13" />
+                                    <button type="button" class="btn btn-success" data-smartcard-read="true" title="อ่านข้อมูลจากบัตร">
+                                        <svg width="15" height="15" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v1h14V4a1 1 0 0 0-1-1H2zm13 4H1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7z"/></svg>
+                                        อ่านข้อมูลจากบัตร
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Input.CitizenId" class="text-danger small"></span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label asp-for="Input.FullName" class="form-label fw-semibold"></label>
+                                    <input asp-for="Input.FullName" class="form-control" id="patientFullName" />
+                                    <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                                </div>
+                                <div class="col-6">
+                                    <label asp-for="Input.BirthDate" class="form-label fw-semibold"></label>
+                                    <input asp-for="Input.BirthDate" class="form-control" type="date" id="patientBirthDate" />
+                                </div>
+                                <div class="col-6">
+                                    <label asp-for="Input.Gender" class="form-label fw-semibold"></label>
+                                    <select asp-for="Input.Gender" class="form-select" id="patientGender">
+                                        <option value="ชาย">ชาย</option>
+                                        <option value="หญิง">หญิง</option>
+                                        <option value="ไม่ระบุ">ไม่ระบุ</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label asp-for="Input.Address" class="form-label fw-semibold"></label>
+                            <textarea asp-for="Input.Address" class="form-control" rows="2" id="patientAddress"></textarea>
+                            <span asp-validation-for="Input.Address" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="Input.PhoneNumber" class="form-control" id="patientPhoneNumber" placeholder="0X-XXXX-XXXX" />
+                            <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Photo" class="form-label fw-semibold">หรืออัปโหลดรูปภาพ</label>
+                            <input asp-for="Input.Photo" class="form-control" type="file" accept="image/*"
+                                   id="patientPhotoFile" onchange="previewUploadedPhoto(event)" />
+                        </div>
+                    </div>
+
+                    <!-- ID-card style preview panel (hidden until card read) -->
+                    <div id="cardPreviewPanel" style="display:none;" class="mb-4">
+                        <div class="id-card-preview">
+                            <div class="d-flex gap-3 align-items-start position-relative" style="z-index:1">
+                                <div style="width:76px;height:92px;border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,.45);flex-shrink:0;background:rgba(0,0,0,.25)">
+                                    <img id="idCardPhotoThumb" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;" />
+                                    <div id="idCardPhotoPlaceholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.5;">
+                                        <svg width="32" height="32" fill="white" viewBox="0 0 16 16"><path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/></svg>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1" style="min-width:0">
+                                    <div class="small opacity-70 mb-0" style="font-size:.68rem;letter-spacing:.06em">บัตรประจำตัวประชาชน • THAILAND</div>
+                                    <div class="fw-bold mb-0" style="font-size:1.05rem;line-height:1.3" id="idCardThaiName">-</div>
+                                    <div class="small opacity-85 mb-2" id="idCardEnglishName">-</div>
+                                    <div class="small opacity-80">เลขบัตร: <span class="fw-semibold font-monospace" id="idCardCitizenId">-</span></div>
+                                    <div class="small opacity-80">วันเกิด: <span id="idCardBirthDate">-</span> &nbsp;|&nbsp; <span id="idCardGender">-</span></div>
+                                    <div class="small opacity-70">ออกบัตร: <span id="idCardIssueDate">-</span> &nbsp; หมดอายุ: <span id="idCardExpiryDate">-</span></div>
+                                </div>
+                            </div>
+                            <div class="small opacity-70 mt-2 pt-2 border-top border-white border-opacity-25 position-relative" style="z-index:1;font-size:.8rem" id="idCardAddress">-</div>
+                            <div class="d-flex justify-content-between align-items-center mt-1 position-relative" style="z-index:1">
+                                <span class="small opacity-60" id="idCardIssuer" style="font-size:.72rem"></span>
+                                <span class="badge bg-white bg-opacity-25 small" id="cardPreviewSource">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                            บันทึกผู้ป่วย
+                        </button>
+                        <a class="btn btn-outline-primary" asp-controller="MedicalRecords" asp-action="Index">OPD Card</a>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" onclick="clearPatientForm()">ล้างฟอร์ม</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Recent patients -->
+    <div class="col-xl-5 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-bold mb-0">ผู้ป่วยล่าสุด</h2>
+                    <span class="badge text-bg-light">@Model.RecentPatients.Count รายการ</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    @foreach (var patient in Model.RecentPatients)
+                    {
+                        <div class="list-group-item px-0 py-3 border-bottom">
+                            <div class="d-flex gap-3 align-items-center">
+                                <div class="recent-patient-avatar">
+                                    @if (patient.HasPhoto)
+                                    {
+                                        <img src="@Url.Action("Photo", "Patients", new { citizenId = patient.CitizenId })"
+                                             alt="@patient.FullName" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <svg width="22" height="22" fill="#adb5bd" viewBox="0 0 16 16"><path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/></svg>
+                                    }
+                                </div>
+                                <div class="flex-grow-1" style="min-width:0">
+                                    <div class="fw-semibold text-truncate">@patient.FullName</div>
+                                    <div class="small text-body-secondary font-monospace">@patient.CitizenId</div>
+                                </div>
+                                <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-1">
+                                    <div class="badge text-bg-primary">@patient.Gender</div>
+                                    <div class="small text-body-secondary">@patient.CreatedAt</div>
+                                    <div class="d-flex gap-1 mt-1">
+                                        <a href="@Url.Action("Edit", "Patients", new { citizenId = patient.CitizenId })"
+                                           class="btn btn-outline-secondary btn-sm py-0 px-2" title="แก้ไข">
+                                            <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
+                                        </a>
+                                        <form asp-action="Delete" asp-route-citizenId="@patient.CitizenId" method="post"
+                                              onsubmit="return confirm('ยืนยันลบผู้ป่วย @patient.FullName ?')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="ลบ">
+                                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (!Model.RecentPatients.Any())
+                    {
+                        <div class="text-center py-5 text-body-secondary">
+                            <svg width="40" height="40" fill="currentColor" class="mb-2 opacity-25" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/><path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+                            <div>ยังไม่มีผู้ป่วยในระบบ</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    function previewUploadedPhoto(event) {
+        var file = event.target.files && event.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            setPatientPhotoPreview(e.target.result, 'อัปโหลด');
+            document.getElementById('patientPhotoBase64Input').value = '';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function setPatientPhotoPreview(dataUrl, sourceLabel) {
+        var preview = document.getElementById('patientPhotoPreview');
+        var placeholder = document.getElementById('photoPlaceholderIcon');
+        var thumb = document.getElementById('idCardPhotoThumb');
+        var idPlaceholder = document.getElementById('idCardPhotoPlaceholder');
+        var sourceEl = document.getElementById('photoSourceLabel');
+        if (dataUrl) {
+            preview.src = dataUrl;
+            preview.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+            if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
+            if (idPlaceholder) idPlaceholder.style.display = 'none';
+        }
+        if (sourceEl) sourceEl.textContent = sourceLabel || '';
+    }
+
+    function clearPatientForm() {
+        ['patientCitizenId','patientFullName','patientAddress','patientPhoneNumber','patientBirthDate'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        var g = document.getElementById('patientGender');
+        if (g) g.value = 'ชาย';
+        document.getElementById('patientPhotoBase64Input').value = '';
+        var prev = document.getElementById('patientPhotoPreview');
+        if (prev) prev.style.display = 'none';
+        var ph = document.getElementById('photoPlaceholderIcon');
+        if (ph) ph.style.display = '';
+        var src = document.getElementById('photoSourceLabel');
+        if (src) src.textContent = '-';
+        var panel = document.getElementById('cardPreviewPanel');
+        if (panel) panel.style.display = 'none';
+    }
+    </script>
+}

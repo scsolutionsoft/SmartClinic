@@ -1,0 +1,839 @@
+:root {
+  --sc-ink: var(--bs-body-color);
+  --sc-muted: var(--bs-secondary-color);
+  --sc-line: var(--bs-border-color-translucent);
+  --sc-panel: color-mix(in srgb, var(--bs-body-bg) 88%, white 12%);
+  --sc-soft: color-mix(in srgb, var(--bs-body-bg) 88%, var(--bs-primary) 12%);
+  --sc-primary: var(--bs-primary);
+  --sc-primary-strong: color-mix(in srgb, var(--bs-primary) 78%, black 22%);
+  --sc-accent: var(--bs-info);
+  --sc-rgb-primary: var(--bs-primary-rgb);
+  --sc-rgb-info: var(--bs-info-rgb);
+  --sc-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+  --sc-shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+html {
+  font-size: 15px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 15.5px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem var(--bs-body-bg), 0 0 0 0.25rem rgba(var(--sc-rgb-primary), 0.28);
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+  color: var(--sc-ink);
+  font-family: "Segoe UI", "Noto Sans Thai", Tahoma, Arial, sans-serif;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(var(--sc-rgb-primary), 0.13), transparent 26%),
+    radial-gradient(circle at 92% 10%, rgba(var(--sc-rgb-info), 0.1), transparent 25%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bs-body-bg) 94%, white 6%) 0%, color-mix(in srgb, var(--bs-body-bg) 88%, var(--bs-primary) 12%) 100%);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--sc-ink);
+  letter-spacing: 0;
+}
+
+a {
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+.smartclinic-navbar {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--bs-dark) 86%, var(--bs-primary) 14%) 0%, color-mix(in srgb, var(--bs-primary) 72%, var(--bs-dark) 28%) 100%);
+}
+
+.smartclinic-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 0.82rem;
+}
+
+.smartclinic-navbar .nav-link {
+  border-radius: 999px;
+  padding: 0.48rem 0.72rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.smartclinic-navbar .nav-link:hover,
+.smartclinic-navbar .nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.nav-tool,
+.nav-account {
+  padding-left: 0.4rem;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--bs-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.theme-select {
+  min-width: 140px;
+}
+
+.profile-report-sheet {
+  background: #fff;
+  color: #111827;
+  width: min(210mm, 100%);
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 13mm 16mm 8mm;
+  border: 1px solid #d8dee6;
+  box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, .12);
+  font-family: "TH Sarabun New", "Sarabun", "Leelawadee UI", Tahoma, sans-serif;
+  font-size: 17px;
+  line-height: 1.48;
+  position: relative;
+}
+
+.profile-form-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+
+.profile-form-top > div:last-child {
+  text-align: right;
+}
+
+.profile-form-small-box {
+  min-width: 26px;
+  min-height: 13px;
+  display: inline-block;
+  margin-top: 6px;
+  border: 1px solid #111827;
+  padding: 0 6px;
+  font-size: 14px;
+  line-height: 17px;
+}
+
+.profile-form-date {
+  margin-top: 4px;
+}
+
+.profile-form-patient-photo {
+  position: absolute;
+  top: 30mm;
+  right: 5mm;
+  width: 24mm;
+  height: 30mm;
+  border: 1px solid #111827;
+  background: #fff;
+  padding: 1mm;
+}
+
+.profile-form-patient-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-form-title {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.profile-form-logo {
+  display: block;
+  width: 24mm;
+  height: 24mm;
+  object-fit: contain;
+  margin: -4mm auto 2mm;
+}
+
+.profile-form-title h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 2px;
+}
+
+.profile-form-title .clinic-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.profile-form-section {
+  border-top: 1px solid #d7dde6;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.profile-form-section h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 6px;
+}
+
+.profile-form-section p {
+  margin: 0 0 6px;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 42px;
+}
+
+.profile-form-grid span {
+  color: #4b5563;
+}
+
+.profile-form-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 52px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.signature-line {
+  min-height: 74px;
+  position: relative;
+}
+
+.profile-form-signature-img {
+  display: block;
+  width: 58mm;
+  height: 17mm;
+  object-fit: contain;
+  margin: -21mm auto 1mm;
+}
+
+.signature-line .line {
+  border-bottom: 1px dotted #111827;
+  height: 1px;
+  margin-bottom: 7px;
+}
+
+.profile-form-provider-title {
+  font-size: 15px;
+}
+
+.profile-form-barcode {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3mm;
+  text-align: center;
+  font-family: "Courier New", monospace;
+  letter-spacing: 0;
+  font-size: 15px;
+}
+
+.profile-form-barcode svg {
+  display: block;
+  height: 42px;
+  max-width: 82mm;
+  margin: 0 auto 1mm;
+}
+
+@media print {
+  .profile-report-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 13mm 16mm 8mm;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+.app-shell {
+  max-width: 1900px;
+}
+
+.hero-panel {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--bs-dark) 88%, var(--bs-primary) 12%), color-mix(in srgb, var(--bs-primary) 86%, var(--bs-dark) 14%));
+  box-shadow: var(--sc-shadow);
+}
+
+.hero-panel .display-5,
+.hero-panel .display-6,
+.hero-panel h1,
+.hero-panel h2,
+.hero-panel h3 {
+  color: #fff;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.card {
+  border: 1px solid var(--sc-line) !important;
+  border-radius: 0.9rem;
+  background: var(--sc-panel);
+  box-shadow: var(--sc-shadow-sm) !important;
+  overflow: hidden;
+}
+
+.card-body {
+  color: var(--sc-ink);
+}
+
+.form-label {
+  margin-bottom: 0.38rem;
+  color: var(--sc-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.form-control,
+.form-select {
+  min-height: 2.5rem;
+  border-color: var(--sc-line);
+  border-radius: 0.55rem;
+  font-size: 0.95rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: rgba(var(--sc-rgb-primary), 0.65);
+  box-shadow: 0 0 0 0.22rem rgba(var(--sc-rgb-primary), 0.14);
+}
+
+textarea.form-control {
+  line-height: 1.45;
+}
+
+.btn {
+  border-radius: 0.55rem;
+  font-weight: 700;
+}
+
+.btn-primary {
+  border-color: var(--sc-primary);
+  background: var(--sc-primary);
+}
+
+.btn-primary:hover {
+  border-color: var(--sc-primary-strong);
+  background: var(--sc-primary-strong);
+}
+
+.btn-info {
+  border-color: var(--sc-accent);
+  background: var(--sc-accent);
+}
+
+.badge {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  font-size: 0.92rem;
+}
+
+.table thead th {
+  color: var(--sc-muted);
+  border-bottom-color: var(--sc-line);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.table tbody td {
+  border-color: var(--sc-line);
+  vertical-align: middle;
+}
+
+.list-group-item {
+  border-color: var(--sc-line);
+}
+
+.modal-content {
+  border-radius: 0.9rem;
+}
+
+.footer {
+  background: color-mix(in srgb, var(--bs-body-bg) 72%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.status-kpi {
+  background: color-mix(in srgb, var(--bs-body-bg) 90%, var(--bs-primary) 10%);
+  border: 1px solid var(--sc-line);
+}
+
+.smartclinic-status-header {
+  border-bottom: 0;
+}
+
+.opd-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.opd-status-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 220px;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--sc-line);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.opd-status-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: var(--bs-success);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-success-rgb), 0.14);
+}
+
+.opd-step-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.opd-step {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--sc-line);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--bs-secondary-color);
+}
+
+.opd-step span,
+.opd-section-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bs-body-color) 10%, transparent);
+  color: var(--sc-ink);
+  font-weight: 700;
+}
+
+.opd-step.active {
+  border-color: rgba(var(--sc-rgb-primary), 0.35);
+  background: rgba(var(--sc-rgb-primary), 0.08);
+  color: var(--sc-ink);
+}
+
+.opd-step.active span,
+.opd-section-index {
+  background: var(--sc-primary);
+  color: #fff;
+}
+
+.opd-form-card {
+  overflow: visible;
+}
+
+.opd-form-section {
+  padding: 1rem;
+  border: 1px solid var(--sc-line);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--bs-body-bg) 82%, var(--bs-primary) 6%);
+}
+
+.opd-form-section + .opd-form-section {
+  margin-top: 1rem;
+}
+
+.opd-form-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.opd-form-section-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.opd-form-section-header p {
+  margin: 0.15rem 0 0;
+  color: var(--bs-secondary-color);
+  font-size: 0.88rem;
+}
+
+.opd-action-bar {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 3;
+  padding: 0.85rem;
+  border: 1px solid var(--sc-line);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--bs-body-bg) 92%, transparent);
+  box-shadow: var(--sc-shadow);
+  backdrop-filter: blur(10px);
+}
+
+.opd-form-section textarea.form-control {
+  min-height: 6rem;
+}
+
+.signature-thumb {
+  max-height: 54px;
+  max-width: 160px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  border: 1px solid var(--sc-line);
+  padding: 0.25rem;
+  background: #fff;
+}
+
+.report-paper {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.report-signature-image {
+  max-height: 90px;
+  max-width: 340px;
+  object-fit: contain;
+}
+
+.report-signature-placeholder {
+  min-height: 72px;
+  border: 1px dashed var(--sc-line);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bs-secondary-color);
+}
+
+.amed-report-sheet {
+  position: relative;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 7mm 8mm 26mm;
+  color: #111;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.amed-report-header {
+  position: relative;
+  text-align: center;
+  min-height: 36mm;
+}
+
+.amed-report-logo {
+  width: 25mm;
+  height: 21mm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 1mm;
+}
+
+.amed-service-box {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border: 1px solid #444;
+  padding: 2mm 4mm;
+  font-weight: 700;
+  background: var(--bs-body-bg);
+}
+
+.amed-patient-photo {
+  position: absolute;
+  right: -5mm;
+  top: 15mm;
+  width: 28mm;
+  height: 35mm;
+  object-fit: cover;
+  border: 1px solid #444;
+  background: #fff;
+}
+
+.amed-report-title {
+  font-size: 18px;
+  text-align: center;
+  font-weight: 700;
+  margin: 0 0 1mm;
+}
+
+.amed-clinic-line {
+  line-height: 1.3;
+}
+
+.amed-visit-line,
+.amed-patient-line {
+  display: flex;
+  justify-content: center;
+  gap: 10mm;
+  flex-wrap: wrap;
+  margin-bottom: 1mm;
+}
+
+.amed-patient-line {
+  justify-content: flex-start;
+  gap: 6mm;
+}
+
+.amed-section {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.amed-label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amed-value {
+  flex: 1;
+}
+
+.amed-heading {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 5px 0 2px;
+}
+
+.amed-block {
+  min-height: 22px;
+}
+
+.amed-preline {
+  white-space: pre-line;
+}
+
+.amed-child-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.amed-medicine-list {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 3px;
+}
+
+.amed-medicine-item {
+  padding-left: 4mm;
+  text-indent: -4mm;
+}
+
+.amed-medicine-name {
+  font-weight: 700;
+}
+
+.amed-signature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.amed-signature-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.amed-signature-img,
+.amed-signature-empty {
+  width: 210px;
+  height: 54px;
+  object-fit: contain;
+  margin: 0 auto 2px;
+}
+
+.amed-signature-empty {
+  border-bottom: 1px dotted #555;
+}
+
+.amed-report-bottom {
+  position: absolute;
+  left: 8mm;
+  right: 3mm;
+  bottom: 7mm;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 18px;
+}
+
+.amed-revision-text {
+  align-self: end;
+  font-size: 12px;
+}
+
+.amed-auth-time {
+  text-align: right;
+  font-size: 13px;
+}
+
+.amed-barcode {
+  grid-column: 2;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.amed-barcode svg {
+  display: block;
+  max-width: 260px;
+  height: 54px;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: #fff;
+    margin: 0;
+  }
+
+  header,
+  footer,
+  .smartclinic-navbar {
+    display: none !important;
+  }
+
+  .report-paper {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  .report-toolbar {
+    display: none !important;
+  }
+
+  .report-print-area {
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  .amed-report-sheet {
+    position: relative;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none !important;
+    padding: 7mm 8mm 26mm;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .smartclinic-navbar .navbar-collapse {
+    margin-top: 0.8rem;
+    padding: 0.8rem;
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--bs-dark) 24%, transparent);
+  }
+
+  .smartclinic-navbar .nav-link {
+    border-radius: 0.65rem;
+  }
+
+  .nav-tool,
+  .nav-account {
+    align-items: stretch !important;
+    flex-wrap: wrap;
+    padding-left: 0;
+  }
+
+  .opd-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .opd-status-panel {
+    width: 100%;
+  }
+
+  .opd-step-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .opd-step-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .opd-action-bar .btn {
+    flex: 1 1 100%;
+  }
+}

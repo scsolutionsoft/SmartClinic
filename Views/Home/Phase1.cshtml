@@ -1,0 +1,64 @@
+@{
+    ViewData["Title"] = "Phase 1";
+}
+
+<section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+            <span class="badge bg-light text-dark mb-3">เฟส 1</span>
+            <h1 class="display-5 fw-semibold mb-3">ระบบข้อมูลคลินิกและบัญชีผู้ใช้</h1>
+            <p class="lead mb-0">ดึงข้อมูลคลินิกจาก สปสช., สร้างบัญชี Admin Clinic, รองรับการเลือกธีม Bootswatch และเตรียมโครงสร้างเริ่มต้นสำหรับงานจริง</p>
+        </div>
+        <div class="col-lg-4">
+            <div class="glass-card p-3 p-lg-4 rounded-4">
+                <div class="fw-semibold mb-2">สถานะการพัฒนา</div>
+                <div class="small opacity-75">- โครง MVC พร้อมใช้งาน</div>
+                <div class="small opacity-75">- Theme switcher พร้อม</div>
+                <div class="small opacity-75">- เตรียมเชื่อม Identity และ SQL Server</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="phase1" class="row g-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small mb-2">Clinic Master</div>
+                <h5 class="card-title">ข้อมูลคลินิกจาก สปสช.</h5>
+                <p class="card-text">ใช้รหัส ชื่อ และที่อยู่ของคลินิกจากทะเบียนกลางเป็นข้อมูลหลักของระบบ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small mb-2">Admin Clinic</div>
+                <h5 class="card-title">บัญชีเริ่มต้น</h5>
+                <p class="card-text">ใช้รหัสคลินิกเป็น Username และเบอร์โทรผู้ลงทะเบียนเป็นรหัสผ่านเริ่มต้น</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small mb-2">Theme</div>
+                <h5 class="card-title">Bootswatch Lux / Flatly / Minty</h5>
+                <p class="card-text">สลับธีมได้เพื่อให้ระบบดูหรูและเป็นระเบียบเหมาะกับการใช้งานจริง</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-uppercase text-muted small mb-2">Identity</div>
+                <h5 class="card-title">Role-based Access</h5>
+                <p class="card-text">รองรับ Super Admin, Admin Clinic, Nurse และผู้ใช้งานตามสิทธิ์ที่กำหนด</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a class="btn btn-primary" asp-controller="Patients" asp-action="Index">Continue to Phase 2</a>
+</div>

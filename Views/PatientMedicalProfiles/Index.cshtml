@@ -1,0 +1,522 @@
+@model PatientMedicalProfilesDashboardViewModel
+@{
+    ViewData["Title"] = "เวชระเบียนผู้รับบริการ";
+}
+
+<section class="opd-page-header mb-4">
+    <div>
+        <div class="text-uppercase text-body-secondary small fw-semibold mb-1">Patient Medical Profile</div>
+        <h1 class="h2 fw-semibold mb-1">เวชระเบียนผู้รับบริการ</h1>
+        <div class="text-body-secondary">อัปโหลด PDF อ่านข้อมูล แก้ไขข้อมูลผู้ป่วย และบันทึกเอกสารต้นฉบับลง SQL Server</div>
+    </div>
+    <div class="opd-status-panel">
+        <span class="opd-status-dot"></span>
+        <span>@Model.StatusMessage</span>
+    </div>
+</section>
+
+<div class="opd-step-strip mb-4">
+    <div class="opd-step active"><span>1</span><strong>อัปโหลด PDF</strong></div>
+    <div class="opd-step"><span>2</span><strong>อ่านข้อมูล</strong></div>
+    <div class="opd-step"><span>3</span><strong>แก้ไขผู้ป่วย</strong></div>
+    <div class="opd-step"><span>4</span><strong>บันทึก/พิมพ์</strong></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow-sm border-0 opd-form-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <h2 class="h4 fw-semibold mb-0">เพิ่มเวชระเบียนผู้รับบริการ</h2>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-status-modal='{"type":"primary","subtitle":"Patient profile PDF","state":"Ready","stateDescription":"พร้อมอ่านข้อมูลจาก PDF","message":"เลือกไฟล์ PDF แล้วกดอ่านข้อมูล ระบบจะเติมข้อมูลลงฟอร์มและสามารถแก้ไขก่อนบันทึกได้","meta":"PDF stored as varbinary(max)","actionText":"ตกลง"}'>
+                        ดูขั้นตอน
+                    </button>
+                </div>
+
+                <form asp-action="Create" method="post" enctype="multipart/form-data" id="patientMedicalProfileForm">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <input asp-for="Input.PatientId" type="hidden" id="profilePatientId" />
+
+                    <section class="opd-form-section">
+                        <div class="opd-form-section-header">
+                            <span class="opd-section-index">1</span>
+                            <div>
+                                <h3>ไฟล์และผู้ป่วย</h3>
+                                <p>ระบบค้นผู้ป่วยจากชื่อหรือเลขบัตรที่อ่านได้ หากไม่พบจะสร้างผู้ป่วยใหม่จากข้อมูลในฟอร์ม</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="Input.SourcePdfFile" class="form-label"></label>
+                                <span class="text-body-secondary small">(ไม่บังคับ)</span>
+                                <div class="input-group">
+                                    <input asp-for="Input.SourcePdfFile" type="file" accept="application/pdf" class="form-control" id="profilePdfFile" />
+                                    <button type="button" class="btn btn-info text-white" id="profilePdfImportButton" disabled>อ่านข้อมูลจาก PDF</button>
+                                </div>
+                                <span asp-validation-for="Input.SourcePdfFile" class="text-danger"></span>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold" for="profilePatientSearch">ค้นหาผู้ป่วย</label>
+                                <input asp-for="Input.PatientSearchText" class="form-control" id="profilePatientSearch" autocomplete="off" placeholder="ชื่อ นามสกุล หรือเลขบัตรประชาชน" />
+                                <div class="list-group mt-2" id="profilePatientSearchResults" style="display:none;"></div>
+                                <div class="form-text" id="profileSelectedPatientText">หากยังไม่เลือก ระบบจะค้น/สร้างจากเลขบัตรประชาชนเมื่อบันทึก</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="opd-form-section">
+                        <div class="opd-form-section-header">
+                            <span class="opd-section-index">2</span>
+                            <div>
+                                <h3>ข้อมูลผู้รับบริการ</h3>
+                                <p>ข้อมูลส่วนนี้จะอัปเดตกลับไปยังฐานข้อมูลผู้ป่วยด้วย</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Input.ServiceRecipientId" class="form-label"></label>
+                                <input asp-for="Input.ServiceRecipientId" class="form-control" id="profileServiceRecipientId" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.CitizenId" class="form-label"></label>
+                                <input asp-for="Input.CitizenId" class="form-control" id="profileCitizenId" maxlength="13" />
+                                <span asp-validation-for="Input.CitizenId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-8">
+                                <label asp-for="Input.PatientName" class="form-label"></label>
+                                <input asp-for="Input.PatientName" class="form-control" id="profilePatientName" />
+                                <span asp-validation-for="Input.PatientName" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.Gender" class="form-label"></label>
+                                <select asp-for="Input.Gender" class="form-select" id="profileGender">
+                                    <option value="ไม่ระบุ">ไม่ระบุ</option>
+                                    <option value="ชาย">ชาย</option>
+                                    <option value="หญิง">หญิง</option>
+                                    <option value="อื่นๆ">อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.BirthDate" class="form-label"></label>
+                                <input asp-for="Input.BirthDate" type="date" class="form-control" id="profileBirthDate" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.Race" class="form-label"></label>
+                                <input asp-for="Input.Race" class="form-control" id="profileRace" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.Nationality" class="form-label"></label>
+                                <input asp-for="Input.Nationality" class="form-control" id="profileNationality" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.MaritalStatus" class="form-label"></label>
+                                <input asp-for="Input.MaritalStatus" class="form-control" id="profileMaritalStatus" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                                <input asp-for="Input.PhoneNumber" class="form-control" id="profilePhoneNumber" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.InformationGivenDate" class="form-label"></label>
+                                <input asp-for="Input.InformationGivenDate" type="date" class="form-control" id="profileInformationGivenDate" />
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Input.RegisteredAddress" class="form-label"></label>
+                                <textarea asp-for="Input.RegisteredAddress" class="form-control" rows="2" id="profileRegisteredAddress"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Input.ContactAddress" class="form-label"></label>
+                                <textarea asp-for="Input.ContactAddress" class="form-control" rows="2" id="profileContactAddress"></textarea>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="opd-form-section">
+                        <div class="opd-form-section-header">
+                            <span class="opd-section-index">3</span>
+                            <div>
+                                <h3>ข้อมูลประวัติและสิทธิ</h3>
+                                <p>แก้ไขข้อความที่อ่านจาก PDF ให้ถูกต้องก่อนบันทึก</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Input.UnderlyingDisease" class="form-label"></label>
+                                <textarea asp-for="Input.UnderlyingDisease" class="form-control" rows="2" id="profileUnderlyingDisease"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.PrimaryHospital" class="form-label"></label>
+                                <textarea asp-for="Input.PrimaryHospital" class="form-control" rows="2" id="profilePrimaryHospital"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.PastHistory" class="form-label"></label>
+                                <textarea asp-for="Input.PastHistory" class="form-control" rows="2" id="profilePastHistory"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.FamilyHistory" class="form-label"></label>
+                                <textarea asp-for="Input.FamilyHistory" class="form-control" rows="2" id="profileFamilyHistory"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.AllergyHistory" class="form-label"></label>
+                                <textarea asp-for="Input.AllergyHistory" class="form-control" rows="2" id="profileAllergyHistory"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.MedicalBenefit" class="form-label"></label>
+                                <select asp-for="Input.MedicalBenefit" class="form-select" id="profileMedicalBenefit">
+                                    <option value="">-- เลือกสิทธิการรักษาพยาบาล --</option>
+                                    <option value="ประกันสุขภาพถ้วนหน้า (30 บาท)">1. ประกันสุขภาพถ้วนหน้า (30 บาท)</option>
+                                    <option value="เบิกจ่ายตรง-ข้าราชการ">2. เบิกจ่ายตรง-ข้าราชการ</option>
+                                    <option value="ประกันสังคม">3. ประกันสังคม</option>
+                                    <option value="ทราบสิทธิแต่ประสงค์จ่ายเงินเอง">4. ทราบสิทธิแต่ประสงค์จ่ายเงินเอง</option>
+                                    <option value="อื่นๆ">5. อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.EmergencyContactName" class="form-label"></label>
+                                <input asp-for="Input.EmergencyContactName" class="form-control" id="profileEmergencyContactName" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.EmergencyContactPhone" class="form-label"></label>
+                                <input asp-for="Input.EmergencyContactPhone" class="form-control" id="profileEmergencyContactPhone" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="opd-sticky-actions">
+                        <button type="submit" class="btn btn-primary px-4" id="profileSubmitButton">บันทึกเวชระเบียนผู้รับบริการ</button>
+                        <button type="button" class="btn btn-outline-secondary" id="profilePreviewSelectedPdfButton" disabled>พรีวิว PDF ที่เลือก</button>
+                        <button type="reset" class="btn btn-outline-danger ms-auto">ล้างฟอร์ม</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-semibold mb-0">รายการล่าสุด</h2>
+                    <span class="badge text-bg-light">@Model.Profiles.Count รายการ</span>
+                </div>
+
+                <div class="list-group list-group-flush">
+                    @foreach (var item in Model.Profiles)
+                    {
+                        <div class="list-group-item px-0 py-3">
+                            <div class="fw-semibold">@item.PatientName</div>
+                            <div class="small text-body-secondary">@item.CitizenId • @item.InformationGivenDateText</div>
+                            <div class="small text-body-secondary">เลขผู้รับบริการ: @(string.IsNullOrWhiteSpace(item.ServiceRecipientId) ? "-" : item.ServiceRecipientId)</div>
+                            <div class="small text-body-secondary text-truncate">@item.MedicalBenefit</div>
+                            <div class="d-flex gap-2 mt-2 flex-wrap">
+                                @if (item.HasPdfFile)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-pdf-url="@Url.Action("Preview", "PatientMedicalProfiles", new { id = item.Id })">พรีวิวต้นฉบับ</button>
+                                }
+                                <a class="btn btn-outline-secondary btn-sm" asp-action="Edit" asp-route-id="@item.Id">แก้ไข</a>
+                                <a class="btn btn-outline-primary btn-sm" asp-action="Report" asp-route-id="@item.Id">รายงาน/พิมพ์</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('ยืนยันลบเวชระเบียนผู้รับบริการของ @item.PatientName ?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">ลบ</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!Model.Profiles.Any())
+                    {
+                        <div class="text-center text-body-secondary py-5">ยังไม่มีเวชระเบียนผู้รับบริการ</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="profilePdfPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">พรีวิว PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="profilePdfPreviewFrame" style="width:100%;height:78vh;border:0;" title="PDF preview"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const pdfInput = document.getElementById('profilePdfFile');
+            const importButton = document.getElementById('profilePdfImportButton');
+            const previewButton = document.getElementById('profilePreviewSelectedPdfButton');
+            const searchBox = document.getElementById('profilePatientSearch');
+            const searchResults = document.getElementById('profilePatientSearchResults');
+            const selectedText = document.getElementById('profileSelectedPatientText');
+            const submitButton = document.getElementById('profileSubmitButton');
+            const form = document.getElementById('patientMedicalProfileForm');
+            let selectedPdfUrl = null;
+            let searchTimer = null;
+
+            const setValue = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.value = value || '';
+            };
+
+            function setDuplicateState(patient) {
+                const hasProfile = patient?.hasProfile === true;
+                if (submitButton) submitButton.disabled = hasProfile;
+                if (hasProfile) {
+                    selectedText.innerHTML = `เลือกผู้ป่วยแล้ว: ${patient.fullName} (${patient.citizenId}) <span class="text-danger fw-semibold">มีรายงานเดิมแล้ว</span>`;
+                    smartClinicStatusModal.show({
+                        type: 'warning',
+                        subtitle: 'Patient medical profile',
+                        state: 'Existing report',
+                        stateDescription: 'พบเวชระเบียนผู้รับบริการเดิม',
+                        message: 'ผู้ป่วยรายนี้มีรายงานเวชระเบียนผู้รับบริการอยู่แล้ว ระบบอนุญาตให้มีเพียง 1 รายงานต่อ 1 คน',
+                        meta: `Citizen ID: ${patient.citizenId}`,
+                        actionText: 'รับทราบ',
+                        items: [
+                            { title: 'ผู้ป่วย', detail: patient.fullName || '-', time: 'Found' },
+                            { title: 'รายงานเดิม', detail: patient.profileId ? `Record #${patient.profileId}` : '-', time: 'Existing' }
+                        ]
+                    });
+                    return;
+                }
+
+                selectedText.textContent = `เลือกผู้ป่วยแล้ว: ${patient.fullName} (${patient.citizenId})`;
+            }
+
+            function fillFormFromPatient(patient) {
+                const profile = patient.profile || null;
+                setValue('profilePatientId', patient.id);
+                setValue('profilePatientSearch', `${patient.fullName} (${patient.citizenId})`);
+                setValue('profileCitizenId', patient.citizenId);
+
+                if (profile) {
+                    setValue('profileServiceRecipientId', profile.serviceRecipientId || patient.serviceRecipientId || document.getElementById('profileServiceRecipientId')?.value);
+                    setValue('profilePatientName', profile.patientName || patient.fullName);
+                    setValue('profileGender', profile.gender || patient.gender || 'ไม่ระบุ');
+                    setValue('profileBirthDate', profile.birthDate || patient.birthDate);
+                    setValue('profileRace', profile.race);
+                    setValue('profileNationality', profile.nationality);
+                    setValue('profileMaritalStatus', profile.maritalStatus);
+                    setValue('profileRegisteredAddress', profile.registeredAddress || patient.address);
+                    setValue('profileContactAddress', profile.contactAddress || profile.registeredAddress || patient.address);
+                    setValue('profilePhoneNumber', profile.phoneNumber || patient.phoneNumber);
+                    setValue('profilePrimaryHospital', profile.primaryHospital);
+                    setValue('profileUnderlyingDisease', profile.underlyingDisease);
+                    setValue('profilePastHistory', profile.pastHistory || 'ปฏิเสธ');
+                    setValue('profileFamilyHistory', profile.familyHistory || 'ปฏิเสธ');
+                    setValue('profileAllergyHistory', profile.allergyHistory || 'ปฏิเสธ');
+                    setValue('profileMedicalBenefit', profile.medicalBenefit);
+                    setValue('profileEmergencyContactName', profile.emergencyContactName);
+                    setValue('profileEmergencyContactPhone', profile.emergencyContactPhone);
+                    setValue('profileInformationGivenDate', profile.informationGivenDate);
+                } else {
+                    setValue('profileServiceRecipientId', patient.serviceRecipientId || document.getElementById('profileServiceRecipientId')?.value);
+                    setValue('profilePatientName', patient.fullName);
+                    setValue('profileGender', patient.gender || 'ไม่ระบุ');
+                    setValue('profileBirthDate', patient.birthDate);
+                    setValue('profileRegisteredAddress', patient.address);
+                    setValue('profileContactAddress', patient.address);
+                    setValue('profilePhoneNumber', patient.phoneNumber);
+                    setValue('profilePastHistory', document.getElementById('profilePastHistory')?.value || 'ปฏิเสธ');
+                    setValue('profileFamilyHistory', document.getElementById('profileFamilyHistory')?.value || 'ปฏิเสธ');
+                    setValue('profileAllergyHistory', document.getElementById('profileAllergyHistory')?.value || 'ปฏิเสธ');
+                }
+
+                setDuplicateState(patient);
+            }
+
+            async function searchPatient(query, autoSelectExact = false) {
+                if (!query || query.trim().length < 2) {
+                    searchResults.style.display = 'none';
+                    searchResults.innerHTML = '';
+                    return;
+                }
+
+                const response = await fetch(`/PatientMedicalProfiles/SearchPatients?q=${encodeURIComponent(query.trim())}`);
+                const patients = await response.json();
+                searchResults.innerHTML = '';
+
+                const exactPatient = patients.find(patient =>
+                    patient.citizenId === query.trim() ||
+                    (patient.fullName || '').trim() === query.trim());
+                if (autoSelectExact && exactPatient) {
+                    fillFormFromPatient(exactPatient);
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                patients.forEach(patient => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `list-group-item list-group-item-action ${patient.hasProfile ? 'list-group-item-warning' : ''}`;
+                    button.innerHTML = `
+                        <div class="d-flex justify-content-between gap-2">
+                            <span>${patient.fullName} (${patient.citizenId})</span>
+                            ${patient.hasProfile ? '<span class="badge text-bg-warning">มีรายงานเดิม</span>' : ''}
+                        </div>`;
+                    button.addEventListener('click', () => {
+                        fillFormFromPatient(patient);
+                        searchResults.style.display = 'none';
+                    });
+                    searchResults.appendChild(button);
+                });
+                searchResults.style.display = patients.length ? '' : 'none';
+            }
+
+            searchBox?.addEventListener('input', function () {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(() => searchPatient(searchBox.value), 250);
+            });
+
+            pdfInput?.addEventListener('change', function () {
+                if (selectedPdfUrl) URL.revokeObjectURL(selectedPdfUrl);
+                selectedPdfUrl = pdfInput.files?.[0] ? URL.createObjectURL(pdfInput.files[0]) : null;
+                if (previewButton) previewButton.disabled = !selectedPdfUrl;
+                if (importButton) importButton.disabled = !selectedPdfUrl;
+            });
+
+            form?.addEventListener('reset', function () {
+                window.setTimeout(function () {
+                    if (submitButton) submitButton.disabled = false;
+                    if (importButton) importButton.disabled = true;
+                    if (previewButton) previewButton.disabled = true;
+                    selectedText.textContent = 'หากยังไม่เลือก ระบบจะค้น/สร้างจากเลขบัตรประชาชนเมื่อบันทึก';
+                    searchResults.style.display = 'none';
+                    searchResults.innerHTML = '';
+                }, 0);
+            });
+
+            previewButton?.addEventListener('click', function () {
+                if (!selectedPdfUrl) return;
+                const frame = document.getElementById('profilePdfPreviewFrame');
+                if (frame) frame.src = selectedPdfUrl;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('profilePdfPreviewModal')).show();
+            });
+
+            document.addEventListener('click', function (event) {
+                const trigger = event.target.closest('[data-preview-pdf-url]');
+                if (!trigger) return;
+                const frame = document.getElementById('profilePdfPreviewFrame');
+                if (frame) frame.src = trigger.getAttribute('data-preview-pdf-url');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('profilePdfPreviewModal')).show();
+            });
+
+            importButton?.addEventListener('click', async function () {
+                const file = pdfInput?.files?.[0];
+                if (!file) {
+                    smartClinicStatusModal.show({ type: 'warning', subtitle: 'PDF import', state: 'Missing file', stateDescription: 'ยังไม่ได้เลือกไฟล์', message: 'กรุณาเลือกไฟล์ PDF ก่อนอ่านข้อมูล', meta: '-', actionText: 'ปิด' });
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('sourcePdfFile', file);
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+                try {
+                    const response = await fetch('/PatientMedicalProfiles/ImportPdf', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: formData
+                    });
+                    const payload = await response.json();
+                    if (!response.ok || !payload.success) {
+                        throw new Error(payload.error || 'อ่าน PDF ไม่สำเร็จ');
+                    }
+
+                    const data = payload.data;
+                    setValue('profileServiceRecipientId', data.serviceRecipientId);
+                    setValue('profileCitizenId', data.citizenId);
+                    setValue('profilePatientName', data.patientName);
+                    setValue('profileGender', data.gender || 'ไม่ระบุ');
+                    setValue('profileBirthDate', data.birthDate);
+                    setValue('profileRace', data.race);
+                    setValue('profileNationality', data.nationality);
+                    setValue('profileMaritalStatus', data.maritalStatus);
+                    setValue('profileRegisteredAddress', data.registeredAddress);
+                    setValue('profileContactAddress', data.contactAddress || data.registeredAddress);
+                    setValue('profilePhoneNumber', data.phoneNumber);
+                    setValue('profilePrimaryHospital', data.primaryHospital);
+                    setValue('profileUnderlyingDisease', data.underlyingDisease);
+                    setValue('profilePastHistory', data.pastHistory);
+                    setValue('profileFamilyHistory', data.familyHistory);
+                    setValue('profileAllergyHistory', data.allergyHistory);
+                    setValue('profileMedicalBenefit', data.medicalBenefit);
+                    setValue('profileEmergencyContactName', data.emergencyContactName);
+                    setValue('profileEmergencyContactPhone', data.emergencyContactPhone);
+                    setValue('profileInformationGivenDate', data.informationGivenDate);
+                    setValue('profilePatientSearch', data.patientName || data.citizenId);
+
+                    if (data.patientName || data.citizenId) {
+                        await searchPatient(data.citizenId || data.patientName, true);
+                    }
+
+                    smartClinicStatusModal.show({
+                        type: 'success',
+                        subtitle: 'PDF import',
+                        state: 'Completed',
+                        stateDescription: 'อ่านข้อมูลจาก PDF สำเร็จ',
+                        message: 'ระบบเติมข้อมูลลงฟอร์มแล้ว กรุณาตรวจสอบและแก้ไขก่อนบันทึก',
+                        meta: file.name,
+                        actionText: 'ตรวจข้อมูล'
+                    });
+                } catch (error) {
+                    smartClinicStatusModal.show({ type: 'danger', subtitle: 'PDF import', state: 'Failed', stateDescription: 'อ่านข้อมูลไม่สำเร็จ', message: error.message, meta: file.name, actionText: 'ปิด' });
+                }
+            });
+
+            @if ((TempData["PatientMedicalProfileStatus"] as string) == "created")
+            {
+                <text>
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Patient medical profile',
+                    state: 'Saved',
+                    stateDescription: 'บันทึกเวชระเบียนสำเร็จ',
+                    message: 'ระบบบันทึกเวชระเบียนผู้รับบริการเรียบร้อยแล้ว',
+                    meta: 'สร้างรายการใหม่',
+                    actionText: 'ตกลง'
+                });
+                </text>
+            }
+            else if ((TempData["PatientMedicalProfileStatus"] as string) == "updated")
+            {
+                <text>
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Patient medical profile',
+                    state: 'Updated',
+                    stateDescription: 'แก้ไขข้อมูลสำเร็จ',
+                    message: 'ระบบบันทึกการแก้ไขเวชระเบียนผู้รับบริการเรียบร้อยแล้ว',
+                    meta: 'อัปเดตรายการเดิม',
+                    actionText: 'ตกลง'
+                });
+                </text>
+            }
+            else if ((TempData["PatientMedicalProfileStatus"] as string) == "deleted")
+            {
+                <text>
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Patient medical profile',
+                    state: 'Deleted',
+                    stateDescription: 'ลบข้อมูลสำเร็จ',
+                    message: 'ระบบลบเวชระเบียนผู้รับบริการออกจากรายการแล้ว',
+                    meta: 'ลบเฉพาะเวชระเบียน ไม่ลบข้อมูลผู้ป่วย',
+                    actionText: 'ตกลง'
+                });
+                </text>
+            }
+        });
+    </script>
+}

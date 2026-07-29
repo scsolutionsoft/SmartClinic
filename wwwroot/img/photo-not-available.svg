@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 380" role="img" aria-label="Photo not available">
+  <rect width="300" height="380" fill="#cfcfcf"/>
+  <g fill="#fff" stroke="#111" stroke-width="8" stroke-linejoin="round">
+    <circle cx="150" cy="115" r="78"/>
+    <path d="M38 340c6-90 52-143 112-143s106 53 112 143c-39 12-185 12-224 0z"/>
+  </g>
+  <text x="150" y="255" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="39" font-weight="800" fill="#000">PHOTO</text>
+  <text x="150" y="302" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="39" font-weight="800" fill="#000">NOT</text>
+  <text x="150" y="349" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="39" font-weight="800" fill="#000">AVAILABLE</text>
+</svg>

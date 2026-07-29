@@ -1,0 +1,567 @@
+@model MedicalRecordsDashboardViewModel
+@{
+    ViewData["Title"] = "เวชระเบียน OPD";
+}
+
+<section class="opd-page-header mb-4">
+    <div>
+        <div class="text-uppercase text-body-secondary small fw-semibold mb-1">OPD Medical Records</div>
+        <h1 class="h2 fw-semibold mb-1">เพิ่มเวชระเบียนจาก PDF</h1>
+        <div class="text-body-secondary">ค้นผู้ป่วย อัปโหลด PDF ตรวจข้อมูล แล้วบันทึกประวัติการรักษา</div>
+    </div>
+    <div class="opd-status-panel">
+        <span class="opd-status-dot"></span>
+        <span>@Model.StatusMessage</span>
+    </div>
+</section>
+
+<div class="opd-step-strip mb-4">
+    <div class="opd-step active">
+        <span>1</span>
+        <strong>เลือกผู้ป่วย</strong>
+    </div>
+    <div class="opd-step">
+        <span>2</span>
+        <strong>อ่าน PDF</strong>
+    </div>
+    <div class="opd-step">
+        <span>3</span>
+        <strong>ตรวจข้อมูล</strong>
+    </div>
+    <div class="opd-step">
+        <span>4</span>
+        <strong>บันทึก</strong>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow-sm border-0 opd-form-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h4 fw-semibold mb-0">ข้อมูลเวชระเบียน</h2>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-status-modal='{"type":"primary","subtitle":"OPD upload flow","state":"Ready","stateDescription":"พร้อมอ่านและบันทึก PDF","message":"เลือกผู้ป่วย อัปโหลด PDF อ่านข้อมูล ตรวจทาน แล้วบันทึกลง SQL Server","meta":"PDF stored as varbinary(max)","actionText":"ตกลง"}'>
+                        ดูขั้นตอน
+                    </button>
+                </div>
+
+                <form asp-action="Create" method="post" enctype="multipart/form-data" id="medicalRecordForm">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <input asp-for="Input.PatientId" type="hidden" id="medicalPatientId" />
+
+                    <section class="opd-form-section">
+                        <div class="opd-form-section-header">
+                            <span class="opd-section-index">1</span>
+                            <div>
+                                <h3>ผู้ป่วยและไฟล์ PDF</h3>
+                                <p>ค้นจากชื่อ/เลขบัตร หรือให้ระบบเติมจากไฟล์ PDF อัตโนมัติ</p>
+                            </div>
+                        </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="patientSearchBox">ค้นหาผู้ป่วย</label>
+                        <input id="patientSearchBox" class="form-control" autocomplete="off" placeholder="ชื่อ นามสกุล หรือเลขบัตรประชาชน" />
+                        <div class="list-group mt-2" id="patientSearchResults" style="display:none;"></div>
+                        <div class="form-text" id="selectedPatientText">ยังไม่ได้เลือกผู้ป่วย</div>
+                        <span asp-validation-for="Input.PatientId" class="text-danger"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.CitizenId" class="form-label"></label>
+                            <input asp-for="Input.CitizenId" class="form-control" id="medicalCitizenId" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.ServiceRecipientId" class="form-label"></label>
+                            <input asp-for="Input.ServiceRecipientId" class="form-control" id="serviceRecipientId" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.VisitDate" class="form-label"></label>
+                            <input asp-for="Input.VisitDate" type="datetime-local" class="form-control" id="visitDateInput" min="1900-01-01T00:00" step="60" />
+                            <span asp-validation-for="Input.VisitDate" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.AuthenticationCode" class="form-label"></label>
+                            <input asp-for="Input.AuthenticationCode" class="form-control" id="authenticationCode" />
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Input.OpdPdfFile" class="form-label"></label>
+                            <div class="input-group">
+                                <input asp-for="Input.OpdPdfFile" type="file" accept="application/pdf" class="form-control" id="opdPdfFile" />
+                                <button type="button" class="btn btn-info text-white" data-medical-pdf-import="true">
+                                    อ่านข้อมูลจาก PDF
+                                </button>
+                            </div>
+                            <span asp-validation-for="Input.OpdPdfFile" class="text-danger"></span>
+                        </div>
+                    </div>
+                    </section>
+
+                    <section class="opd-form-section">
+                        <div class="opd-form-section-header">
+                            <span class="opd-section-index">2</span>
+                            <div>
+                                <h3>ข้อมูลการรักษา</h3>
+                                <p>ตรวจทานข้อมูลที่ระบบอ่านจาก PDF ก่อนบันทึก</p>
+                            </div>
+                        </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label asp-for="Input.Diagnosis" class="form-label"></label>
+                            <input asp-for="Input.Diagnosis" class="form-control" id="diagnosisInput" />
+                            <span asp-validation-for="Input.Diagnosis" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.InitialDifferentialDiagnosis" class="form-label"></label>
+                            <textarea asp-for="Input.InitialDifferentialDiagnosis" class="form-control" rows="2" id="initialDifferentialDiagnosis"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.ChiefComplaint" class="form-label"></label>
+                            <textarea asp-for="Input.ChiefComplaint" class="form-control" rows="2" id="chiefComplaint"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.PresentIllness" class="form-label"></label>
+                            <textarea asp-for="Input.PresentIllness" class="form-control" rows="3" id="presentIllness"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.PhysicalExam" class="form-label"></label>
+                            <textarea asp-for="Input.PhysicalExam" class="form-control" rows="3" id="physicalExam"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.ProblemPhysicalExam" class="form-label"></label>
+                            <textarea asp-for="Input.ProblemPhysicalExam" class="form-control" rows="3" id="problemPhysicalExam"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.TreatmentAndAdvice" class="form-label"></label>
+                            <textarea asp-for="Input.TreatmentAndAdvice" class="form-control" rows="4" id="treatmentAndAdvice"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.ReferralDetail" class="form-label"></label>
+                            <input asp-for="Input.ReferralDetail" class="form-control" id="referralDetail" />
+                        </div>
+                    </div>
+                    </section>
+
+                    <section class="opd-form-section">
+                        <div class="opd-form-section-header">
+                            <span class="opd-section-index">3</span>
+                            <div>
+                                <h3>การติดตามและข้อมูลเพิ่มเติม</h3>
+                                <p>ระบุการติดตาม กรณีเด็ก และหมายเหตุถ้ามี</p>
+                            </div>
+                        </div>
+                    <div class="row g-3">
+                        <div class="col-12 border rounded-3 p-3 bg-body-tertiary">
+                            <div class="fw-semibold mb-2">การติดตามผู้รับบริการ</div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input asp-for="Input.FollowUpNone" class="form-check-input" id="followUpNone" />
+                                        <label asp-for="Input.FollowUpNone" class="form-check-label"></label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input asp-for="Input.FollowUpPhone" class="form-check-input" id="followUpPhone" />
+                                        <label asp-for="Input.FollowUpPhone" class="form-check-label"></label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input asp-for="Input.FollowUpClinic" class="form-check-input" id="followUpClinic" />
+                                        <label asp-for="Input.FollowUpClinic" class="form-check-label"></label>
+                                    </div>
+                                    <input asp-for="Input.FollowUpClinicNote" class="form-control form-control-sm mb-2" id="followUpClinicNote" placeholder="ระบุการนัดที่คลินิก" />
+                                    <div class="form-check">
+                                        <input asp-for="Input.FollowUpOther" class="form-check-input" id="followUpOther" />
+                                        <label asp-for="Input.FollowUpOther" class="form-check-label"></label>
+                                    </div>
+                                    <input asp-for="Input.FollowUpOtherNote" class="form-control form-control-sm" id="followUpOtherNote" placeholder="ระบุช่องทางอื่น" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.ServiceEndDateTime" class="form-label"></label>
+                            <input asp-for="Input.ServiceEndDateTime" type="datetime-local" class="form-control" id="serviceEndDateTime" min="1900-01-01T00:00" step="60" />
+                        </div>
+
+                        <div class="col-12 border rounded-3 p-3 bg-body-tertiary">
+                            <div class="form-check form-switch mb-3">
+                                <input asp-for="Input.IsChildCase" class="form-check-input" type="checkbox" id="isChildCase" />
+                                <label asp-for="Input.IsChildCase" class="form-check-label fw-semibold"></label>
+                            </div>
+                            <div id="childCaseFields" style="display:none;">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label asp-for="Input.ChildGrowthStatus" class="form-label"></label>
+                                        <select asp-for="Input.ChildGrowthStatus" class="form-select">
+                                            <option value="">-</option>
+                                            <option value="สมวัย">สมวัย</option>
+                                            <option value="ไม่สมวัย">ไม่สมวัย</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label asp-for="Input.ChildDevelopmentStatus" class="form-label"></label>
+                                        <select asp-for="Input.ChildDevelopmentStatus" class="form-select">
+                                            <option value="">-</option>
+                                            <option value="ปกติ">ปกติ</option>
+                                            <option value="ไม่ปกติ">ไม่ปกติ</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label asp-for="Input.ChildVaccineStatus" class="form-label"></label>
+                                        <select asp-for="Input.ChildVaccineStatus" class="form-select">
+                                            <option value="">-</option>
+                                            <option value="ครบ">ครบ</option>
+                                            <option value="ไม่ครบ">ไม่ครบ</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label asp-for="Input.ChildVaccineNote" class="form-label"></label>
+                                        <input asp-for="Input.ChildVaccineNote" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Input.Note" class="form-label"></label>
+                            <textarea asp-for="Input.Note" rows="3" class="form-control"></textarea>
+                            <span asp-validation-for="Input.Note" class="text-danger"></span>
+                        </div>
+                    </div>
+                    </section>
+
+                    <div class="opd-action-bar mt-4 d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary">บันทึก OPD Card</button>
+                        <button type="button" class="btn btn-outline-secondary" id="previewSelectedPdfButton" disabled>พรีวิว PDF ที่เลือก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h4 fw-semibold mb-0">ประวัติการรักษาล่าสุด</h2>
+                    <span class="badge text-bg-light">@Model.Records.Count รายการ</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>ผู้ป่วย</th>
+                                <th>วันที่</th>
+                                <th>Auth</th>
+                                <th>วินิจฉัย</th>
+                                <th class="text-end">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in Model.Records)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@record.PatientName</div>
+                                        <div class="small text-body-secondary">@record.CitizenId</div>
+                                        @if (!string.IsNullOrWhiteSpace(record.ServiceRecipientId))
+                                        {
+                                            <div class="small text-body-secondary">HN: @record.ServiceRecipientId</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div>@record.VisitDateText</div>
+                                        <div class="small text-body-secondary">สร้าง @record.CreatedAtText</div>
+                                    </td>
+                                    <td class="small">@record.AuthenticationCode</td>
+                                    <td style="max-width:260px;">
+                                        <div class="text-truncate" title="@record.Diagnosis">@record.Diagnosis</div>
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button"
+                                                class="btn btn-outline-secondary btn-sm"
+                                                data-preview-pdf-url="@Url.Action("Preview", "MedicalRecords", new { id = record.Id })"
+                                                data-preview-pdf-title="OPD Card: @record.PatientName">
+                                            Preview
+                                        </button>
+                                        <a class="btn btn-outline-primary btn-sm" asp-controller="MedicalRecords" asp-action="Report" asp-route-id="@record.Id">
+                                            Report
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Records.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-body-secondary py-4">ยังไม่มีประวัติการรักษา</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="pdfPreviewLabel">PDF Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="height:75vh;">
+                <iframe id="pdfPreviewFrame" title="PDF Preview" class="w-100 h-100 border-0"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const patientSearchBox = document.getElementById('patientSearchBox');
+            const patientResults = document.getElementById('patientSearchResults');
+            const patientIdInput = document.getElementById('medicalPatientId');
+            const citizenIdInput = document.getElementById('medicalCitizenId');
+            const selectedPatientText = document.getElementById('selectedPatientText');
+            const pdfInput = document.getElementById('opdPdfFile');
+            const previewSelectedPdfButton = document.getElementById('previewSelectedPdfButton');
+            const childToggle = document.getElementById('isChildCase');
+            const childFields = document.getElementById('childCaseFields');
+            let searchTimer = null;
+            let selectedPdfUrl = null;
+
+            function setValue(id, value) {
+                const element = document.getElementById(id);
+                if (element) element.value = value || '';
+            }
+
+            function toggleChildFields() {
+                if (childFields) childFields.style.display = childToggle && childToggle.checked ? '' : 'none';
+            }
+
+            childToggle?.addEventListener('change', toggleChildFields);
+            toggleChildFields();
+
+            function selectPatient(item) {
+                if (!item) return;
+                patientIdInput.value = item.id;
+                citizenIdInput.value = item.citizenId;
+                patientSearchBox.value = item.fullName;
+                selectedPatientText.textContent = item.text || `${item.fullName} (${item.citizenId})`;
+                patientResults.style.display = 'none';
+            }
+
+            async function searchPatientFromPdf(patientName) {
+                const query = (patientName || '').trim();
+                if (!query || query.length < 2) return;
+
+                patientSearchBox.value = query;
+                patientIdInput.value = '';
+                citizenIdInput.value = '';
+                selectedPatientText.textContent = 'กำลังค้นหาผู้ป่วยจากชื่อใน PDF...';
+
+                const response = await fetch(`/MedicalRecords/SearchPatients?q=${encodeURIComponent(query)}`);
+                const items = await response.json();
+
+                if (!items.length) {
+                    patientResults.innerHTML = '<div class="list-group-item text-body-secondary">ไม่พบผู้ป่วยจากชื่อใน PDF</div>';
+                    patientResults.style.display = '';
+                    selectedPatientText.textContent = 'ไม่พบผู้ป่วยจากชื่อใน PDF';
+                    return;
+                }
+
+                const normalizedQuery = query.replace(/\s+/g, ' ').trim();
+                const exactMatch = items.find(item => (item.fullName || '').replace(/\s+/g, ' ').trim() === normalizedQuery);
+                if (exactMatch || items.length === 1) {
+                    selectPatient(exactMatch || items[0]);
+                    return;
+                }
+
+                patientResults.innerHTML = '';
+                items.forEach(function (item) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'list-group-item list-group-item-action';
+                    button.innerHTML = `<div class="fw-semibold">${item.fullName}</div><div class="small text-body-secondary">${item.citizenId}</div>`;
+                    button.addEventListener('click', function () {
+                        selectPatient(item);
+                    });
+                    patientResults.appendChild(button);
+                });
+                patientResults.style.display = '';
+                selectedPatientText.textContent = 'พบหลายรายการ กรุณาเลือกผู้ป่วย';
+            }
+
+            patientSearchBox?.addEventListener('input', function () {
+                const query = patientSearchBox.value.trim();
+                patientIdInput.value = '';
+                citizenIdInput.value = '';
+                selectedPatientText.textContent = 'ยังไม่ได้เลือกผู้ป่วย';
+                window.clearTimeout(searchTimer);
+
+                if (query.length < 2) {
+                    patientResults.style.display = 'none';
+                    patientResults.innerHTML = '';
+                    return;
+                }
+
+                searchTimer = window.setTimeout(async function () {
+                    const response = await fetch(`/MedicalRecords/SearchPatients?q=${encodeURIComponent(query)}`);
+                    const items = await response.json();
+                    patientResults.innerHTML = '';
+
+                    if (!items.length) {
+                        patientResults.innerHTML = '<div class="list-group-item text-body-secondary">ไม่พบผู้ป่วย</div>';
+                        patientResults.style.display = '';
+                        return;
+                    }
+
+                    items.forEach(function (item) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'list-group-item list-group-item-action';
+                        button.innerHTML = `<div class="fw-semibold">${item.fullName}</div><div class="small text-body-secondary">${item.citizenId}</div>`;
+                        button.addEventListener('click', function () {
+                            selectPatient(item);
+                        });
+                        patientResults.appendChild(button);
+                    });
+                    patientResults.style.display = '';
+                }, 250);
+            });
+
+            pdfInput?.addEventListener('change', function () {
+                if (selectedPdfUrl) URL.revokeObjectURL(selectedPdfUrl);
+                const file = pdfInput.files && pdfInput.files[0];
+                selectedPdfUrl = file ? URL.createObjectURL(file) : null;
+                if (previewSelectedPdfButton) previewSelectedPdfButton.disabled = !selectedPdfUrl;
+            });
+
+            previewSelectedPdfButton?.addEventListener('click', function () {
+                if (!selectedPdfUrl) return;
+                const modalElement = document.getElementById('pdfPreviewModal');
+                const iframe = document.getElementById('pdfPreviewFrame');
+                const label = document.getElementById('pdfPreviewLabel');
+                if (iframe) iframe.src = selectedPdfUrl;
+                if (label) label.textContent = 'PDF ที่เลือก';
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            });
+
+            document.querySelector('[data-medical-pdf-import]')?.addEventListener('click', async function (event) {
+                const file = pdfInput?.files?.[0];
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (!file) {
+                    smartClinicStatusModal.show({
+                        type: 'warning',
+                        subtitle: 'PDF import',
+                        state: 'No file',
+                        stateDescription: 'ยังไม่ได้เลือกไฟล์',
+                        message: 'กรุณาเลือกไฟล์ PDF ก่อนอ่านข้อมูล',
+                        actionText: 'ปิด'
+                    });
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('opdPdfFile', file);
+                event.currentTarget.disabled = true;
+
+                try {
+                    const response = await fetch('/MedicalRecords/ImportPdf', {
+                        method: 'POST',
+                        headers: token ? { RequestVerificationToken: token.value } : {},
+                        body: formData
+                    });
+                    const payload = await response.json();
+                    if (!response.ok || !payload.success) {
+                        throw new Error(payload.error || `HTTP ${response.status}`);
+                    }
+
+                    const data = payload.data || {};
+                    await searchPatientFromPdf(data.patientName);
+                    setValue('serviceRecipientId', data.serviceRecipientId);
+                    setValue('visitDateInput', data.visitDate);
+                    setValue('authenticationCode', data.authenticationCode);
+                    setValue('diagnosisInput', data.diagnosis);
+                    setValue('initialDifferentialDiagnosis', data.initialDifferentialDiagnosis);
+                    setValue('chiefComplaint', data.chiefComplaint);
+                    setValue('presentIllness', data.presentIllness);
+                    setValue('physicalExam', data.physicalExam);
+                    setValue('problemPhysicalExam', data.problemPhysicalExam);
+                    setValue('treatmentAndAdvice', data.treatmentAndAdvice);
+                    setValue('referralDetail', data.referralDetail);
+                    setValue('followUpClinicNote', data.followUpClinicNote);
+                    setValue('followUpOtherNote', data.followUpOtherNote);
+                    setValue('serviceEndDateTime', data.serviceEndDateTime);
+                    const followUpNone = document.getElementById('followUpNone');
+                    const followUpPhone = document.getElementById('followUpPhone');
+                    const followUpClinic = document.getElementById('followUpClinic');
+                    const followUpOther = document.getElementById('followUpOther');
+                    if (followUpNone) followUpNone.checked = data.followUpNone === true;
+                    if (followUpPhone) followUpPhone.checked = data.followUpPhone === true;
+                    if (followUpClinic) followUpClinic.checked = data.followUpClinic === true;
+                    if (followUpOther) followUpOther.checked = data.followUpOther === true;
+                    const childGrowth = document.querySelector('[name="Input.ChildGrowthStatus"]');
+                    const childDevelopment = document.querySelector('[name="Input.ChildDevelopmentStatus"]');
+                    const childVaccine = document.querySelector('[name="Input.ChildVaccineStatus"]');
+                    const childVaccineNote = document.querySelector('[name="Input.ChildVaccineNote"]');
+                    if (childGrowth) childGrowth.value = data.childGrowthStatus || '';
+                    if (childDevelopment) childDevelopment.value = data.childDevelopmentStatus || '';
+                    if (childVaccine) childVaccine.value = data.childVaccineStatus || '';
+                    if (childVaccineNote) childVaccineNote.value = data.childVaccineNote || '';
+
+                    if (childToggle) {
+                        childToggle.checked = data.isChildCase === true;
+                        toggleChildFields();
+                    }
+
+                    smartClinicStatusModal.show({
+                        type: 'success',
+                        subtitle: 'PDF import',
+                        state: 'Completed',
+                        stateDescription: 'อ่านข้อมูลจาก PDF สำเร็จ',
+                        message: 'ระบบเติมข้อมูล OPD จาก PDF แล้ว กรุณาตรวจทานก่อนบันทึก',
+                        meta: data.authenticationCode ? `Authentication Code: ${data.authenticationCode}` : 'medical-record-pdf',
+                        actionText: 'ตกลง'
+                    });
+                } catch (error) {
+                    smartClinicStatusModal.show({
+                        type: 'danger',
+                        subtitle: 'PDF import',
+                        state: 'Failed',
+                        stateDescription: 'อ่าน PDF ไม่สำเร็จ',
+                        message: error.message,
+                        actionText: 'ปิด'
+                    });
+                } finally {
+                    event.currentTarget.disabled = false;
+                }
+            });
+        })();
+    </script>
+
+    @if ((TempData["StatusModal"] as string) == "record-created")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Medical record update',
+                    state: 'Saved',
+                    stateDescription: 'บันทึกข้อมูลเรียบร้อย',
+                    message: 'ระบบบันทึก OPD Card PDF และรายละเอียดการรักษาลงฐานข้อมูลแล้ว',
+                    meta: 'PDF stored in SQL Server',
+                    actionText: 'Close'
+                });
+            });
+        </script>
+    }
+}

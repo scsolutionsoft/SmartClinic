@@ -1,0 +1,158 @@
+@model PatientEditViewModel
+@{
+    ViewData["Title"] = "แก้ไขข้อมูลผู้ป่วย";
+}
+
+<style>
+    .reader-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .reader-dot.connected { background: #198754; box-shadow: 0 0 0 3px rgba(25,135,84,.2); }
+    .reader-dot.disconnected { background: #adb5bd; }
+    .reader-dot.error { background: #dc3545; }
+</style>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <svg width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+        กลับ
+    </a>
+    <div>
+        <h1 class="h3 fw-bold mb-0">แก้ไขข้อมูลผู้ป่วย</h1>
+        <p class="text-body-secondary small mb-0 font-monospace">@Model.CitizenId</p>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end align-items-center gap-3 flex-wrap mb-4">
+    <div class="d-flex align-items-center gap-1 small">
+        <span class="reader-dot disconnected" id="readerDot"></span>
+        <span id="smartCardReaderStatus" class="text-body-secondary">กำลังตรวจสอบ...</span>
+    </div>
+    <button type="button" class="btn btn-outline-warning btn-sm" data-smartcard-restart="true">
+        <svg width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+        รีสตาร์ท Bridge
+    </button>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form asp-action="Edit" asp-route-citizenId="@Model.CitizenId" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="ClinicCode" type="hidden" />
+                    <input asp-for="PhotoBase64" type="hidden" id="editPhotoBase64Input" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 mb-3"></div>
+
+                    <!-- Photo section -->
+                    <div class="d-flex gap-4 align-items-start mb-4">
+                        <div class="text-center flex-shrink-0">
+                            <div style="width:110px;height:110px;border-radius:50%;border:3px solid #0d6efd;background:#f0f4ff;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto .5rem;">
+                                @if (Model.HasPhoto)
+                                {
+                                    <img id="editPhotoPreview"
+                                         src="@Url.Action("Photo", "Patients", new { citizenId = Model.CitizenId })"
+                                         alt="รูปผู้ป่วย"
+                                         style="width:100%;height:100%;object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <span id="editPhotoPlaceholder" style="color:#adb5bd;">
+                                        <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/></svg>
+                                    </span>
+                                    <img id="editPhotoPreview" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
+                                }
+                            </div>
+                            <div class="small text-body-secondary" id="editPhotoSourceLabel">@(Model.HasPhoto ? "มีรูปในระบบ" : "ยังไม่มีรูป")</div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="mb-3">
+                                <label asp-for="Photo" class="form-label fw-semibold"></label>
+                                <div class="input-group">
+                                    <input asp-for="Photo" class="form-control" type="file" accept="image/*"
+                                           id="editPhotoFile" onchange="previewEditPhoto(event)" />
+                                    <button type="button" class="btn btn-success" data-smartcard-edit-photo-read="true" data-citizen-id="@Model.CitizenId">
+                                        <svg width="15" height="15" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v1h14V4a1 1 0 0 0-1-1H2zm13 4H1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7z"/></svg>
+                                        อัปโหลดรูปจากบัตร
+                                    </button>
+                                </div>
+                                <div class="form-text">อัปโหลดรูปใหม่เพื่อเปลี่ยนรูปเดิม (ไม่บังคับ)</div>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="FullName" class="form-label fw-semibold"></label>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="BirthDate" class="form-label fw-semibold"></label>
+                            <input asp-for="BirthDate" class="form-control" type="date" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Gender" class="form-label fw-semibold"></label>
+                            <select asp-for="Gender" class="form-select">
+                                <option value="ชาย">ชาย</option>
+                                <option value="หญิง">หญิง</option>
+                                <option value="ไม่ระบุ">ไม่ระบุ</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Address" class="form-label fw-semibold"></label>
+                            <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="0X-XXXX-XXXX" />
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                            บันทึกการแก้ไข
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+                        <form asp-action="Delete" asp-route-citizenId="@Model.CitizenId" method="post" class="ms-auto"
+                              onsubmit="return confirm('ยืนยันลบผู้ป่วยรายนี้ออกจากระบบ?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-danger">
+                                <svg width="15" height="15" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                ลบผู้ป่วยนี้
+                            </button>
+                        </form>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    function previewEditPhoto(event) {
+        var file = event.target.files && event.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var preview = document.getElementById('editPhotoPreview');
+            var placeholder = document.getElementById('editPhotoPlaceholder');
+            var base64Input = document.getElementById('editPhotoBase64Input');
+            var sourceLabel = document.getElementById('editPhotoSourceLabel');
+            if (base64Input) base64Input.value = '';
+            if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
+            if (placeholder) placeholder.style.display = 'none';
+            if (sourceLabel) sourceLabel.textContent = 'อัปโหลดรูปใหม่';
+        };
+        reader.readAsDataURL(file);
+    }
+    </script>
+}

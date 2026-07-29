@@ -1,0 +1,150 @@
+@model SignaturesDashboardViewModel
+@{
+    ViewData["Title"] = "Signatures";
+}
+
+<section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+            <span class="badge bg-light text-dark mb-3">Phase 4</span>
+            <h1 class="display-5 fw-semibold mb-3">ระบบลายเซ็นผู้รับบริการ</h1>
+            <p class="lead mb-0">รองรับอัปโหลดลายเซ็นรายคนและหลายไฟล์ โดยผูกกับเลขบัตรประชาชน 13 หลักตามระเบียนประวัติ</p>
+        </div>
+        <div class="col-lg-4">
+            <div class="glass-card p-3 p-lg-4 rounded-4">
+                <div class="fw-semibold mb-2">@Model.StatusMessage</div>
+                <div class="small opacity-75">- Filename: 13 digits + extension</div>
+                <div class="small opacity-75">- Single / Batch upload</div>
+                <div class="small opacity-75">- Link to medical report</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+                <h2 class="h4 fw-semibold mb-3">อัปโหลดลายเซ็นรายคน</h2>
+                <form asp-action="UploadSingle" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="mb-3">
+                        <label asp-for="Input.CitizenId" class="form-label"></label>
+                        <input asp-for="Input.CitizenId" class="form-control" placeholder="เลขบัตรประชาชน 13 หลัก" />
+                        <span asp-validation-for="Input.CitizenId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.SignatureFile" class="form-label"></label>
+                        <input asp-for="Input.SignatureFile" type="file" class="form-control" accept="image/png,image/jpeg,image/webp" />
+                        <span asp-validation-for="Input.SignatureFile" class="text-danger"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary">อัปโหลดรายคน</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+                <h2 class="h4 fw-semibold mb-3">อัปโหลดลายเซ็นหลายไฟล์</h2>
+                <p class="text-body-secondary">รูปแบบไฟล์ต้องเป็นเลขบัตร 13 หลักตามด้วยนามสกุล เช่น 1101701234567.png</p>
+                <form asp-action="UploadBatch" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label asp-for="Input.BatchFiles" class="form-label"></label>
+                        <input asp-for="Input.BatchFiles" type="file" multiple class="form-control" accept="image/png,image/jpeg,image/webp" />
+                        <span asp-validation-for="Input.BatchFiles" class="text-danger"></span>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">อัปโหลดหลายไฟล์</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mt-4">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 fw-semibold mb-0">รายการลายเซ็นล่าสุด</h2>
+            <span class="badge text-bg-light">@Model.Items.Count รายการ</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>เลขบัตรประชาชน</th>
+                        <th>ชื่อไฟล์</th>
+                        <th>วันที่อัปโหลด</th>
+                        <th class="text-end">พรีวิว</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td>@item.CitizenId</td>
+                            <td>@item.FileName</td>
+                            <td>@item.UploadedAtText</td>
+                            <td class="text-end">
+                                <img class="signature-thumb" alt="signature" src="@Url.Action("ImageByCitizen", "Signatures", new { citizenId = item.CitizenId })" />
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-body-secondary py-4">ยังไม่มีข้อมูลลายเซ็น</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    @if ((TempData["StatusModal"] as string) == "signature-single-created")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Signature uploaded',
+                    state: 'Saved',
+                    stateDescription: 'บันทึกลายเซ็นสำเร็จ',
+                    message: 'อัปโหลดลายเซ็นรายคนเรียบร้อย และผูกกับเลขบัตร 13 หลักแล้ว',
+                    meta: 'Single upload completed',
+                    actionText: 'Close',
+                    items: [
+                        { title: 'Citizen mapping', detail: '13-digit mapping ready', time: 'Done' },
+                        { title: 'Database', detail: 'Image stored in SignImg table', time: 'Done' }
+                    ]
+                });
+            });
+        </script>
+    }
+
+    @if ((TempData["StatusModal"] as string) == "signature-batch-created")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Batch upload',
+                    state: 'Completed',
+                    stateDescription: 'บันทึกลายเซ็นหลายไฟล์สำเร็จ',
+                    message: 'ระบบประมวลผลไฟล์ลายเซ็นเรียบร้อย',
+                    meta: 'Batch count: @TempData["BatchCount"]',
+                    actionText: 'Close',
+                    items: [
+                        { title: 'Filename policy', detail: '13-digit filename validated', time: 'Done' },
+                        { title: 'Database', detail: 'Batch records saved to SignImg', time: 'Done' }
+                    ]
+                });
+            });
+        </script>
+    }
+}

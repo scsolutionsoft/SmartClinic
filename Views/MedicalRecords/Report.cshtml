@@ -1,0 +1,318 @@
+@model MedicalRecordReportViewModel
+@{
+    ViewData["Title"] = "รายงานประวัติการรักษา";
+}
+
+<div class="report-toolbar d-print-none mb-3 d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" asp-controller="MedicalRecords" asp-action="Index">กลับ</a>
+    <button type="button" class="btn btn-primary" onclick="window.print()">พิมพ์รายงาน</button>
+    <button type="button"
+            class="btn btn-outline-primary"
+            data-preview-pdf-url="@Model.PreviewPdfUrl"
+            data-preview-pdf-title="OPD Card: @Model.PatientName">
+        ดู PDF ต้นฉบับ
+    </button>
+</div>
+
+<section class="amed-report-sheet bg-white shadow-sm">
+    @{
+        var medicineItems = ExtractMedicineItems(Model.TreatmentAndAdvice);
+        var adviceText = ExtractAdviceText(Model.TreatmentAndAdvice);
+    }
+
+    <div class="amed-report-header">
+        <div class="amed-service-box">เลขประจำตัวผู้รับบริการ&nbsp; <strong>@DisplayValue(Model.ServiceRecipientId)</strong></div>
+        <img src="@(Model.HasPatientPhoto && !string.IsNullOrWhiteSpace(Model.PatientPhotoUrl) ? Model.PatientPhotoUrl : Url.Content("~/img/photo-not-available.svg"))"
+             alt="รูปภาพผู้ป่วย"
+             class="amed-patient-photo" />
+        <img src="~/img/community-clinic-logo.svg" alt="คลินิกพยาบาลชุมชนอบอุ่น" class="amed-report-logo" />
+        <h1 class="amed-report-title">การรักษาโรคเบื้องต้น</h1>
+        <div class="amed-clinic-line">ชื่อคลินิก&nbsp; แปดแยกคลินิกการพยาบาลและการผดุงครรภ์</div>
+        <div class="amed-clinic-line">ที่ตั้ง&nbsp; 59/1 ต.หมากเขียบ อ.เมืองศรีสะเกษ จ.ศรีสะเกษ 33000</div>
+    </div>
+
+    <div class="amed-visit-line">
+        <span>วันที่รับบริการ&nbsp; <strong>@Model.VisitDateShortText</strong></span>
+        <span>Authentication Code&nbsp; <strong>@DisplayValue(Model.AuthenticationCode)</strong></span>
+    </div>
+
+    <div class="amed-patient-line">
+        <span>ชื่อ-สกุล <strong>@Model.PatientName</strong></span>
+        <span>เพศ @RenderCheck(Model.Gender, "ชาย") ชาย @RenderCheck(Model.Gender, "หญิง") หญิง @RenderCheck(Model.Gender, "อื่น") อื่นๆ</span>
+        <span>อายุ <strong>@DisplayValue(Model.AgeText)</strong> ปี</span>
+    </div>
+
+    <div class="amed-section">
+        <div class="amed-label">อาการสำคัญ (Chief Complaint) :</div>
+        <div class="amed-value">@DisplayValue(Model.ChiefComplaint)</div>
+    </div>
+
+    <div class="amed-section">
+        <div class="amed-label">ประวัติเจ็บป่วยปัจจุบัน (Present Illness) :</div>
+        <div class="amed-value">@DisplayValue(Model.PresentIllness)</div>
+    </div>
+
+    <h2 class="amed-heading">การตรวจร่างกาย</h2>
+    <div class="amed-block">@DisplayValue(Model.PhysicalExam)</div>
+
+    <h2 class="amed-heading">การตรวจร่างกายตามปัญหาของผู้ป่วย</h2>
+    <div class="amed-block">@DisplayValue(Model.ProblemPhysicalExam)</div>
+
+    <h2 class="amed-heading">กรณีเด็กอายุต่ำกว่า 12 ปี</h2>
+    <div class="amed-child-row">
+        <span>การเจริญเติบโต : -</span>
+        <span>พัฒนาการ : -</span>
+        <span>ประวัติการรับวัคซีน : -</span>
+    </div>
+
+    <h2 class="amed-heading">อาการนำ</h2>
+    <div class="amed-block">@DisplayValue(Model.InitialDifferentialDiagnosis)</div>
+
+    <h2 class="amed-heading">สรุปการวินิจฉัยโรค</h2>
+    <div class="amed-block">@DisplayValue(Model.Diagnosis)</div>
+
+    <h2 class="amed-heading">การรักษาเบื้องต้นและการให้คำแนะนำ</h2>
+    @if (medicineItems.Count > 0)
+    {
+        <div class="amed-medicine-list">
+            @foreach (var item in medicineItems)
+            {
+                <div class="amed-medicine-item">
+                    <div class="amed-medicine-name">@item.Name</div>
+                    @if (!string.IsNullOrWhiteSpace(item.Usage))
+                    {
+                        <div>การใช้ยา: @item.Usage</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(item.Advice))
+                    {
+                        <div>คำแนะนำ: @item.Advice</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(adviceText))
+    {
+        <div class="amed-block amed-preline">@adviceText</div>
+    }
+
+    <div class="amed-section">
+        <div class="amed-label">กรณีเกินศักยภาพของคลินิกได้ส่งต่อการรักษาที่ :</div>
+        <div class="amed-value">@DisplayValue(Model.ReferralDetail)</div>
+    </div>
+
+    <div class="amed-section">
+        <div class="amed-label">การติดตามผู้รับบริการ :</div>
+        <div class="amed-value">@DisplayValue(Model.FollowUpText)</div>
+    </div>
+
+    <div class="amed-signature-grid">
+        <div class="amed-signature-box">
+            <div class="amed-signature-title">ลายมือชื่อผู้รับบริการ</div>
+            @if (Model.HasSignature && !string.IsNullOrWhiteSpace(Model.SignatureImageUrl))
+            {
+                <img src="@Model.SignatureImageUrl" alt="ลายมือชื่อผู้รับบริการ" class="amed-signature-img" />
+            }
+            else
+            {
+                <div class="amed-signature-empty"></div>
+            }
+            <div>(@Model.PatientName)</div>
+        </div>
+
+        <div class="amed-signature-box">
+            <div class="amed-signature-title">ลายมือชื่อพยาบาลผู้ให้บริการ</div>
+            @if (Model.HasProviderSignature && !string.IsNullOrWhiteSpace(Model.ProviderSignatureImageUrl))
+            {
+                <img src="@Model.ProviderSignatureImageUrl" alt="ลายมือชื่อผู้ให้บริการ" class="amed-signature-img" />
+            }
+            else
+            {
+                <div class="amed-signature-empty"></div>
+            }
+            <div>(@DisplayValue(Model.ProviderName))</div>
+            @if (!string.IsNullOrWhiteSpace(Model.ProviderProfessionalTitle))
+            {
+                <div>@Model.ProviderProfessionalTitle</div>
+            }
+        </div>
+    </div>
+
+    <div class="amed-report-bottom">
+        <div class="amed-revision-text">ปรับปรุงวันที่ 18 ตุลาคม 2567</div>
+        <div class="amed-auth-time">Authentication Time: @DisplayValue(Model.AuthenticationTimeText)</div>
+        <div class="amed-barcode">
+            @Html.Raw(RenderCode39Svg(Model.BarcodeText))
+            <div>*@Model.BarcodeText*</div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade d-print-none" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="pdfPreviewLabel">PDF Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="height:75vh;">
+                <iframe id="pdfPreviewFrame" title="PDF Preview" class="w-100 h-100 border-0"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    private static string RenderCheck(string? value, string expected)
+    {
+        return (value ?? string.Empty).Contains(expected, StringComparison.OrdinalIgnoreCase) ? "☑" : "☐";
+    }
+
+    private sealed record MedicineLine(string Name, string Usage, string Advice);
+
+    private static List<MedicineLine> ExtractMedicineItems(string? rawValue)
+    {
+        var text = NormalizeTreatmentText(rawValue);
+        var firstMedicine = System.Text.RegularExpressions.Regex.Match(text, @"(?<!\d)(?<index>\d+)\.\s+");
+        if (!firstMedicine.Success)
+        {
+            return new List<MedicineLine>();
+        }
+
+        text = text[firstMedicine.Index..];
+        var stopMatch = System.Text.RegularExpressions.Regex.Match(text, @"กรณีเกินศักยภาพ|การติดตามผู้รับบริการ|เวลาสิ้นสุดการบริการ");
+        if (stopMatch.Success)
+        {
+            text = text[..stopMatch.Index];
+        }
+
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            text,
+            @"(?<index>\d+)\.\s*(?<body>.*?)(?=(?:\d+\.\s)|$)",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        var items = new List<MedicineLine>();
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var body = CleanReportText(match.Groups["body"].Value);
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                continue;
+            }
+
+            var usage = MatchGroup(body, @"การใช้ยา\s*:\s*(?<value>.*?)(?=คำแนะนำ\s*:|คําแนะนํา\s*:|$)");
+            var advice = MatchGroup(body, @"(?:คำแนะนำ|คําแนะนํา)\s*:\s*(?<value>.*)$");
+            var name = body;
+            var usageIndex = body.IndexOf("การใช้ยา", StringComparison.OrdinalIgnoreCase);
+            if (usageIndex >= 0)
+            {
+                name = body[..usageIndex];
+            }
+
+            advice = CleanTrailingReferralText(advice);
+            items.Add(new MedicineLine(CleanReportText($"{match.Groups["index"].Value}. {name}"), CleanReportText(usage), CleanReportText(advice)));
+        }
+
+        return items;
+    }
+
+    private static string ExtractAdviceText(string? rawValue)
+    {
+        var text = NormalizeTreatmentText(rawValue);
+        var firstMedicine = System.Text.RegularExpressions.Regex.Match(text, @"(?<!\d)\d+\.\s+");
+        if (firstMedicine.Success)
+        {
+            text = text[..firstMedicine.Index];
+        }
+
+        text = CleanTrailingReferralText(text);
+        return CleanReportText(text);
+    }
+
+    private static string NormalizeTreatmentText(string? value)
+    {
+        var text = value ?? string.Empty;
+        text = text.Replace('\0', ' ');
+        text = text.Replace("คํา", "คำ");
+        text = text.Replace("ที ", "ที่");
+        text = text.Replace("เมื อ", "เมื่อ");
+        text = text.Replace("ชั วโมง", "ชั่วโมง");
+        text = text.Replace("ครั ง", "ครั้ง");
+        text = text.Replace("น า", "น้ำ");
+        return text;
+    }
+
+    private static string CleanTrailingReferralText(string value)
+    {
+        var text = value ?? string.Empty;
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"เวลาปวด\s*กรณีเกินศักยภาพ.*$", "เวลาปวด", System.Text.RegularExpressions.RegexOptions.Singleline);
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"กรณีเกินศักยภาพ.*$", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline);
+        return text;
+    }
+
+    private static string MatchGroup(string value, string pattern)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(value ?? string.Empty, pattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+        return match.Success ? match.Groups["value"].Value : string.Empty;
+    }
+
+    private static string CleanReportText(string value)
+    {
+        var text = value ?? string.Empty;
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\.{5,}", string.Empty);
+        return text.Trim();
+    }
+
+    private static string RenderCode39Svg(string value)
+    {
+        var patterns = new Dictionary<char, string>
+        {
+            ['0'] = "nnnwwnwnn",
+            ['1'] = "wnnwnnnnw",
+            ['2'] = "nnwwnnnnw",
+            ['3'] = "wnwwnnnnn",
+            ['4'] = "nnnwwnnnw",
+            ['5'] = "wnnwwnnnn",
+            ['6'] = "nnwwwnnnn",
+            ['7'] = "nnnwnnwnw",
+            ['8'] = "wnnwnnwnn",
+            ['9'] = "nnwwnnwnn",
+            ['*'] = "nwnnwnwnn"
+        };
+
+        var barcodeValue = $"*{new string((value ?? string.Empty).Where(char.IsDigit).ToArray())}*";
+        if (barcodeValue.Length <= 2)
+        {
+            return string.Empty;
+        }
+
+        const int narrow = 2;
+        const int wide = 5;
+        const int height = 54;
+        var x = 0;
+        var bars = new System.Text.StringBuilder();
+        foreach (var character in barcodeValue)
+        {
+            if (!patterns.TryGetValue(character, out var pattern))
+            {
+                continue;
+            }
+
+            for (var i = 0; i < pattern.Length; i++)
+            {
+                var width = pattern[i] == 'w' ? wide : narrow;
+                if (i % 2 == 0)
+                {
+                    bars.Append($"<rect x='{x}' y='0' width='{width}' height='{height}' fill='#111' />");
+                }
+                x += width;
+            }
+            x += narrow;
+        }
+
+        return $"<svg xmlns='http://www.w3.org/2000/svg' width='{x}' height='{height}' viewBox='0 0 {x} {height}' role='img'>{bars}</svg>";
+    }
+}

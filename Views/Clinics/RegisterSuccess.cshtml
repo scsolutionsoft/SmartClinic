@@ -1,0 +1,16 @@
+@model Clinic
+@{
+    ViewData["Title"] = "Register Success";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-xl-7">
+        <div class="alert alert-success shadow-sm mt-4">
+            <h1 class="h4 fw-semibold">ลงทะเบียนคลินิกสำเร็จ</h1>
+            <p class="mb-1">รหัสคลินิก: <strong>@Model.ClinicCode</strong></p>
+            <p class="mb-1">ชื่อคลินิก: <strong>@Model.ClinicName</strong></p>
+            <p class="mb-1">Username สำหรับ Admin Clinic: <strong>@Model.ClinicCode</strong></p>
+            <p class="mb-0">Password เริ่มต้น: <strong>@ViewBag.InitialPassword</strong></p>
+        </div>
+    </div>
+</div>

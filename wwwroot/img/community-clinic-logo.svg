@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 180" role="img" aria-label="คลินิกพยาบาลชุมชนอบอุ่น">
+  <rect width="220" height="180" fill="#fff"/>
+  <g fill="none" stroke="#2868b7" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M34 74 109 18l77 56"/>
+    <path d="M56 66v72h108V66"/>
+    <path d="M88 138V98h43v40"/>
+    <path d="M172 42v-18h24v38"/>
+  </g>
+  <g fill="#2868b7">
+    <circle cx="72" cy="89" r="12"/>
+    <path d="M50 128c5-21 38-21 44 0z"/>
+    <circle cx="144" cy="89" r="12"/>
+    <path d="M122 128c5-21 38-21 44 0z"/>
+    <circle cx="109" cy="73" r="10"/>
+    <path d="M91 109c4-19 32-19 37 0z"/>
+  </g>
+  <g fill="#2868b7">
+    <rect x="158" y="25" width="42" height="42" rx="5"/>
+    <rect x="174" y="32" width="10" height="28" fill="#fff"/>
+    <rect x="165" y="41" width="28" height="10" fill="#fff"/>
+  </g>
+  <path d="M82 48c5-10 20-9 25 2 6-11 22-10 27 2" fill="none" stroke="#2868b7" stroke-width="6" stroke-linecap="round"/>
+  <text x="110" y="158" text-anchor="middle" font-family="Tahoma, Arial, sans-serif" font-size="15" font-weight="700" fill="#2868b7">คลินิกพยาบาลชุมชนอบอุ่น</text>
+  <text x="110" y="173" text-anchor="middle" font-family="Tahoma, Arial, sans-serif" font-size="9" fill="#2868b7">สำนักงานหลักประกันสุขภาพแห่งชาติ</text>
+</svg>

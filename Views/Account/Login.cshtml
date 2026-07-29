@@ -1,0 +1,35 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body p-4 p-lg-5">
+                <h1 class="h3 fw-semibold mb-3">เข้าสู่ระบบ Admin Clinic</h1>
+                <p class="text-body-secondary">ใช้รหัสคลินิกเป็นชื่อผู้ใช้ และรหัสผ่านเริ่มต้นจากเบอร์โทรผู้ลงทะเบียน</p>
+                <form asp-action="Login" method="post" class="mt-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] ?? string.Empty)" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="mb-3">
+                        <label asp-for="UserName" class="form-label"></label>
+                        <input asp-for="UserName" class="form-control form-control-lg" />
+                        <span asp-validation-for="UserName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" class="form-control form-control-lg" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <div class="form-check mb-4">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label"></label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
