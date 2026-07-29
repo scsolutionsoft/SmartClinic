@@ -13,7 +13,7 @@ Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 // SQL Server connection string for SmartClinic database
 const string ConnectionString = "Server=localhost;Database=SmartClinic;Trusted_Connection=True;TrustServerCertificate=True;";
-const int BridgePort = 9999;
+const int BridgePort = 5247;
 
 var listener = new HttpListener();
 listener.Prefixes.Add($"http://localhost:{BridgePort}/");
