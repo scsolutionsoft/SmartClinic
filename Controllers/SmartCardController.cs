@@ -16,9 +16,9 @@ namespace SmartClinic.Web.Controllers;
 public class SmartCardController : ControllerBase
 {
     private static readonly Regex CitizenIdRegex = new("^\\d{13}$", RegexOptions.Compiled);
-    private const int BridgePort = 9999;
+    private const int BridgePort = 5247;
     private const string BridgeInstallPath = @"C:\Program Files\SmartClinic\CardReader";
-    private const string BridgeStatusUrl = "http://localhost:9999/status";
+    private const string BridgeStatusUrl = "http://localhost:5247/status";
     private readonly ApplicationDbContext _context;
 
     public SmartCardController(ApplicationDbContext context)
@@ -177,8 +177,8 @@ public class SmartCardController : ControllerBase
                 success = isPortListening,
                 port = BridgePort,
                 message = isPortListening
-                    ? "Bridge restarted and port 9999 is listening"
-                    : "Restart command sent, but port 9999 is not listening yet"
+                    ? "Bridge restarted and port 5247 is listening"
+                    : "Restart command sent, but port 5247 is not listening yet"
             });
         }
         catch (Exception ex)

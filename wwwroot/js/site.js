@@ -478,7 +478,7 @@ document.addEventListener('click', async function (event) {
 	});
 
 	try {
-		const ws = new WebSocket('ws://localhost:9999/card');
+		const ws = new WebSocket('ws://localhost:5247/card');
 		session.webSocket = ws;
 
 		const finalize = function () {
@@ -533,7 +533,7 @@ document.addEventListener('click', async function (event) {
 				subtitle: 'Smart card photo',
 				state: 'Connection failed',
 				stateDescription: 'เชื่อมต่อ Bridge ไม่สำเร็จ',
-				message: 'ไม่สามารถเชื่อมต่อ ws://localhost:9999/card ได้',
+				message: 'ไม่สามารถเชื่อมต่อ ws://localhost:5247/card ได้',
 				meta: 'ตรวจสอบว่าเปิด SmartClinic Card Reader Bridge แล้ว',
 				actionText: 'ปิด'
 			});
@@ -591,7 +591,7 @@ document.addEventListener('click', async function (event) {
 	});
 
 	try {
-		const ws = new WebSocket('ws://localhost:9999/card');
+		const ws = new WebSocket('ws://localhost:5247/card');
 		session.webSocket = ws;
 
 		const finalize = function () {
@@ -646,7 +646,7 @@ document.addEventListener('click', async function (event) {
 				subtitle: 'Smart card photo',
 				state: 'Connection failed',
 				stateDescription: 'เชื่อมต่อ Bridge ไม่สำเร็จ',
-				message: 'ไม่สามารถเชื่อมต่อ ws://localhost:9999/card ได้',
+				message: 'ไม่สามารถเชื่อมต่อ ws://localhost:5247/card ได้',
 				meta: 'ตรวจสอบว่าเปิด SmartClinic Card Reader Bridge แล้ว',
 				actionText: 'ปิด'
 			});
@@ -714,7 +714,7 @@ document.addEventListener('click', async function (event) {
 			state: 'Restarted',
 			stateDescription: 'ตัดการเชื่อมต่อและรีสตาร์ทสำเร็จ',
 			message: payload.message || 'Bridge พร้อมใช้งานแล้ว',
-			meta: `Port: ${payload.port || 9999}`,
+			meta: `Port: ${payload.port || 5247}`,
 			actionText: 'ตกลง'
 		});
 	} catch (restartError) {
@@ -778,7 +778,7 @@ document.addEventListener('click', async function (event) {
 				state: 'Restarted',
 				stateDescription: 'รีสตาร์ทพอร์ตสำเร็จ',
 				message: payload.message || 'Bridge พร้อมใช้งานแล้ว',
-				meta: `Port: ${payload.port || 9999}`,
+				meta: `Port: ${payload.port || 5247}`,
 				actionText: 'ตกลง'
 			});
 		} catch (restartError) {
@@ -891,7 +891,7 @@ document.addEventListener('click', async function (event) {
 	});
 
 	try {
-		const ws = new WebSocket('ws://localhost:9999/card');
+		const ws = new WebSocket('ws://localhost:5247/card');
 		session.webSocket = ws;
 
 		const finalize = function () {
@@ -927,7 +927,7 @@ document.addEventListener('click', async function (event) {
 						state: 'Completed',
 						stateDescription: 'อ่านข้อมูลบัตรสำเร็จ (ยังไม่บันทึกฐานข้อมูล)',
 						message: 'ระบบแสดงข้อมูลจากบัตรในฟอร์มครบแล้ว กรุณาตรวจสอบก่อนกดบันทึกผู้ป่วย',
-						meta: `Source: ${data.source || 'smartcard-reader'} | Bridge: ws://localhost:9999/card`,
+						meta: `Source: ${data.source || 'smartcard-reader'} | Bridge: ws://localhost:5247/card`,
 						actionText: 'พร้อมบันทึก',
 						items: buildItems(data)
 					});
