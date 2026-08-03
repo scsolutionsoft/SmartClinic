@@ -7,6 +7,7 @@ using SmartClinic.Web.Data;
 using SmartClinic.Web.Models;
 using SmartClinic.Web.ViewModels;
 using System.Globalization;
+using System.Data;
 using System.Text;
 using System.Text.RegularExpressions;
 using UglyToad.PdfPig;
@@ -26,10 +27,15 @@ public class MedicalRecordsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(int? patientId = null)
+    public async Task<IActionResult> Index(int? patientId = null, string? search = null, int page = 1)
     {
         var clinicCode = await GetClinicCode();
-        var model = await BuildDashboard(clinicCode, "พร้อมอัปโหลด OPD Card และพรีวิว PDF", patientId);
+        var model = await BuildDashboard(
+            clinicCode,
+            "พร้อมอัปโหลด OPD Card และพรีวิว PDF",
+            patientId,
+            page: page,
+            searchTerm: search);
         return View(model);
     }
 
@@ -57,6 +63,16 @@ public class MedicalRecordsController : Controller
                 CitizenId = x.CitizenId
             })
             .ToListAsync();
+
+        var patientIds = patients.Select(x => x.Id).ToList();
+        var defaults = await GetPatientTreatmentDefaults(clinicCode, patientIds);
+        foreach (var patient in patients)
+        {
+            if (defaults.TryGetValue(patient.Id, out var values))
+            {
+                patient.ServiceRecipientId = values.ServiceRecipientId;
+            }
+        }
 
         return Ok(patients);
     }
@@ -102,19 +118,16 @@ public class MedicalRecordsController : Controller
     {
         var clinicCode = await GetClinicCode();
 
+        ValidateAppointment(model);
+
         if (!ModelState.IsValid)
         {
             return View("Index", await BuildDashboard(clinicCode, "กรุณากรอกข้อมูลให้ครบถ้วน", model.Input.PatientId, model));
         }
 
-        if (model.Input.OpdPdfFile is null || model.Input.OpdPdfFile.Length == 0)
-        {
-            ModelState.AddModelError(nameof(model.Input.OpdPdfFile), "กรุณาเลือกไฟล์ PDF");
-            return View("Index", await BuildDashboard(clinicCode, "ไม่พบไฟล์ OPD Card", model.Input.PatientId, model));
-        }
-
-        if (!string.Equals(model.Input.OpdPdfFile.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase) &&
-            !Path.GetExtension(model.Input.OpdPdfFile.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+        if (model.Input.OpdPdfFile is { Length: > 0 } uploadedPdf &&
+            !string.Equals(uploadedPdf.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase) &&
+            !Path.GetExtension(uploadedPdf.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
         {
             ModelState.AddModelError(nameof(model.Input.OpdPdfFile), "รองรับเฉพาะไฟล์ PDF เท่านั้น");
             return View("Index", await BuildDashboard(clinicCode, "ไฟล์ไม่ใช่ PDF", model.Input.PatientId, model));
@@ -131,9 +144,36 @@ public class MedicalRecordsController : Controller
         var providerName = string.IsNullOrWhiteSpace(provider?.FullName) ? provider?.UserName ?? string.Empty : provider.FullName;
         var providerTitle = provider?.ProfessionalTitle ?? string.Empty;
         var authenticationCode = model.Input.AuthenticationCode?.Trim() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(authenticationCode) &&
+            await dbContext.TreatmentRecords.AsNoTracking().AnyAsync(x =>
+                x.ClinicCode == clinicCode &&
+                x.AuthenticationCode == authenticationCode))
+        {
+            ModelState.AddModelError(nameof(model.Input.AuthenticationCode), "Authentication Code นี้ถูกบันทึกไว้แล้ว");
+            ViewData["DuplicateAuthenticationCode"] = authenticationCode;
+            return View("Index", await BuildDashboard(
+                clinicCode, "พบ Authentication Code ซ้ำในระบบ", model.Input.PatientId, model));
+        }
 
-        await using var stream = new MemoryStream();
-        await model.Input.OpdPdfFile.CopyToAsync(stream);
+        await using var quotaTransaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var clinic = await dbContext.Clinics.FirstOrDefaultAsync(x => x.ClinicCode == clinicCode);
+        var usedOpdRecords = await dbContext.TreatmentRecords.CountAsync(x => x.ClinicCode == clinicCode);
+        if (clinic is not null && !clinic.HasUnlimitedOpdRecords && usedOpdRecords >= clinic.OpdRecordLimit)
+        {
+            await quotaTransaction.RollbackAsync();
+            ViewData["QuotaExceeded"] = true;
+            ModelState.AddModelError(string.Empty, "เครดิตเวชระเบียน OPD หมดแล้ว กรุณาติดต่อเพื่อเติมเครดิต");
+            return View("Index", await BuildDashboard(
+                clinicCode, "ครบโควตาเวชระเบียน OPD แล้ว กรุณาติดต่อเพื่อเติมเครดิต", model.Input.PatientId, model));
+        }
+
+        var pdfData = Array.Empty<byte>();
+        if (model.Input.OpdPdfFile is { Length: > 0 } pdf)
+        {
+            await using var stream = new MemoryStream();
+            await pdf.CopyToAsync(stream);
+            pdfData = stream.ToArray();
+        }
 
         var record = new TreatmentRecord
         {
@@ -142,12 +182,23 @@ public class MedicalRecordsController : Controller
             VisitDate = model.Input.VisitDate,
             ServiceRecipientId = model.Input.ServiceRecipientId?.Trim() ?? string.Empty,
             AuthenticationCode = authenticationCode,
+            IsSelfPay = model.Input.IsSelfPay,
             CitizenId = patient.CitizenId,
             Diagnosis = model.Input.Diagnosis,
+            PrimaryIcd10Code = NormalizeIcdCode(model.Input.PrimaryIcd10Code),
+            DifferentialIcd10Codes = NormalizeIcdCodeList(model.Input.DifferentialIcd10Codes),
             InitialDifferentialDiagnosis = model.Input.InitialDifferentialDiagnosis?.Trim() ?? string.Empty,
             ChiefComplaint = model.Input.ChiefComplaint?.Trim() ?? string.Empty,
             PresentIllness = model.Input.PresentIllness?.Trim() ?? string.Empty,
             PhysicalExam = model.Input.PhysicalExam?.Trim() ?? string.Empty,
+            TemperatureCelsius = model.Input.TemperatureCelsius,
+            PulseRate = model.Input.PulseRate,
+            RespiratoryRate = model.Input.RespiratoryRate,
+            SystolicPressure = model.Input.SystolicPressure,
+            DiastolicPressure = model.Input.DiastolicPressure,
+            WeightKilograms = model.Input.WeightKilograms,
+            HeightCentimeters = model.Input.HeightCentimeters,
+            BodyMassIndex = CalculateBmi(model.Input.WeightKilograms, model.Input.HeightCentimeters),
             ProblemPhysicalExam = model.Input.ProblemPhysicalExam?.Trim() ?? string.Empty,
             TreatmentAndAdvice = model.Input.TreatmentAndAdvice?.Trim() ?? string.Empty,
             ReferralDetail = model.Input.ReferralDetail?.Trim() ?? string.Empty,
@@ -155,6 +206,7 @@ public class MedicalRecordsController : Controller
             FollowUpPhone = model.Input.FollowUpPhone,
             FollowUpClinic = model.Input.FollowUpClinic,
             FollowUpClinicNote = model.Input.FollowUpClinic ? model.Input.FollowUpClinicNote : null,
+            FollowUpAppointmentDateTime = model.Input.FollowUpClinic ? model.Input.FollowUpAppointmentDateTime : null,
             FollowUpOther = model.Input.FollowUpOther,
             FollowUpOtherNote = model.Input.FollowUpOther ? model.Input.FollowUpOtherNote : null,
             ServiceEndDateTime = model.Input.ServiceEndDateTime,
@@ -164,9 +216,9 @@ public class MedicalRecordsController : Controller
             ChildVaccineStatus = model.Input.IsChildCase ? model.Input.ChildVaccineStatus : null,
             ChildVaccineNote = model.Input.IsChildCase ? model.Input.ChildVaccineNote : null,
             Note = model.Input.Note,
-            OpdFileName = BuildOpdPdfFileName(patient.CitizenId, authenticationCode),
-            OpdContentType = "application/pdf",
-            OpdPdfData = stream.ToArray(),
+            OpdFileName = pdfData.Length > 0 ? BuildOpdPdfFileName(patient.CitizenId, authenticationCode) : string.Empty,
+            OpdContentType = pdfData.Length > 0 ? "application/pdf" : string.Empty,
+            OpdPdfData = pdfData,
             ProviderUserId = provider?.Id,
             ProviderName = providerName,
             ProviderProfessionalTitle = providerTitle
@@ -174,9 +226,224 @@ public class MedicalRecordsController : Controller
 
         dbContext.TreatmentRecords.Add(record);
         await dbContext.SaveChangesAsync();
+        await quotaTransaction.CommitAsync();
 
         TempData["StatusModal"] = "record-created";
         return RedirectToAction(nameof(Index), new { patientId = patient.Id });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SearchIcd10(string? q, int take = 12)
+    {
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length < 1) return Ok(Array.Empty<object>());
+        var normalized = term.Replace(".", string.Empty).ToUpperInvariant();
+        var items = await dbContext.Icd10Codes.AsNoTracking()
+            .Where(x => x.IsActive && x.IsTerminal && (x.Code.Contains(normalized) || x.DisplayCode.Contains(term) || x.ThaiName.Contains(term) || x.EnglishName.Contains(term) || x.SearchTerms.Contains(term)))
+            .OrderBy(x => x.Code.StartsWith(normalized) ? 0 : 1).ThenBy(x => x.Code)
+            .Take(Math.Clamp(take, 1, 30))
+            .Select(x => new { x.Code, x.DisplayCode, x.ThaiName, x.EnglishName, x.Version, x.ChapterCode, x.ChapterTitle, x.BlockCode, x.BlockTitle })
+            .ToListAsync();
+        return Ok(items);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> MatchIcd10(string? text)
+    {
+        var value = (text ?? string.Empty).Trim();
+        if (value.Length == 0) return Ok(Array.Empty<object>());
+        var codes = Regex.Matches(value.ToUpperInvariant(), @"(?<![A-Z0-9])[A-Z]\d{2}(?:\.?\d{1,4})?(?![A-Z0-9])")
+            .Select(x => NormalizeIcdCode(x.Value)).Distinct().ToList();
+        var matches = await dbContext.Icd10Codes.AsNoTracking().Where(x => x.IsActive && x.IsTerminal && codes.Contains(x.Code))
+            .Select(x => new { x.Code, x.DisplayCode, x.ThaiName, x.EnglishName, x.Version, x.ChapterCode, x.ChapterTitle, x.BlockCode, x.BlockTitle }).ToListAsync();
+        return Ok(matches);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var clinicCode = await GetClinicCode();
+        var record = await dbContext.TreatmentRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id && x.ClinicCode == clinicCode);
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        var model = new MedicalRecordsDashboardViewModel
+        {
+            EditRecordId = record.Id,
+            Input = new MedicalRecordCreateViewModel
+            {
+                PatientId = record.PatientId,
+                VisitDate = record.VisitDate,
+                ServiceRecipientId = record.ServiceRecipientId,
+                AuthenticationCode = record.AuthenticationCode,
+                IsSelfPay = record.IsSelfPay,
+                CitizenId = record.CitizenId,
+                Diagnosis = record.Diagnosis,
+                PrimaryIcd10Code = record.PrimaryIcd10Code,
+                DifferentialIcd10Codes = record.DifferentialIcd10Codes,
+                InitialDifferentialDiagnosis = record.InitialDifferentialDiagnosis,
+                ChiefComplaint = record.ChiefComplaint,
+                PresentIllness = record.PresentIllness,
+                PhysicalExam = record.PhysicalExam,
+                TemperatureCelsius = record.TemperatureCelsius,
+                PulseRate = record.PulseRate,
+                RespiratoryRate = record.RespiratoryRate,
+                SystolicPressure = record.SystolicPressure,
+                DiastolicPressure = record.DiastolicPressure,
+                WeightKilograms = record.WeightKilograms,
+                HeightCentimeters = record.HeightCentimeters,
+                BodyMassIndex = record.BodyMassIndex,
+                ProblemPhysicalExam = record.ProblemPhysicalExam,
+                TreatmentAndAdvice = record.TreatmentAndAdvice,
+                ReferralDetail = record.ReferralDetail,
+                FollowUpNone = record.FollowUpNone,
+                FollowUpPhone = record.FollowUpPhone,
+                FollowUpClinic = record.FollowUpClinic,
+                FollowUpClinicNote = record.FollowUpClinicNote,
+                FollowUpAppointmentDateTime = record.FollowUpAppointmentDateTime,
+                FollowUpOther = record.FollowUpOther,
+                FollowUpOtherNote = record.FollowUpOtherNote,
+                ServiceEndDateTime = record.ServiceEndDateTime,
+                IsChildCase = record.IsChildCase,
+                ChildGrowthStatus = record.ChildGrowthStatus,
+                ChildDevelopmentStatus = record.ChildDevelopmentStatus,
+                ChildVaccineStatus = record.ChildVaccineStatus,
+                ChildVaccineNote = record.ChildVaccineNote,
+                Note = record.Note
+            }
+        };
+
+        return View("Index", await BuildDashboard(
+            clinicCode,
+            "กำลังแก้ไขประวัติการรักษา สามารถเลือก PDF ใหม่หรือใช้ไฟล์เดิม",
+            record.PatientId,
+            model));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, MedicalRecordsDashboardViewModel model)
+    {
+        var clinicCode = await GetClinicCode();
+        var record = await dbContext.TreatmentRecords
+            .FirstOrDefaultAsync(x => x.Id == id && x.ClinicCode == clinicCode);
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        ModelState.Remove("Input.OpdPdfFile");
+        ValidateAppointment(model);
+        if (!ModelState.IsValid)
+        {
+            model.EditRecordId = id;
+            return View("Index", await BuildDashboard(
+                clinicCode, "กรุณาตรวจสอบข้อมูลที่แก้ไข", model.Input.PatientId, model));
+        }
+
+        var patient = await dbContext.Patients
+            .FirstOrDefaultAsync(x => x.Id == model.Input.PatientId && x.ClinicCode == clinicCode);
+        if (patient is null)
+        {
+            return NotFound();
+        }
+
+        var authenticationCode = model.Input.AuthenticationCode?.Trim() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(authenticationCode) &&
+            await dbContext.TreatmentRecords.AsNoTracking().AnyAsync(x =>
+                x.Id != id &&
+                x.ClinicCode == clinicCode &&
+                x.AuthenticationCode == authenticationCode))
+        {
+            ModelState.AddModelError(nameof(model.Input.AuthenticationCode), "Authentication Code นี้ถูกใช้กับเวชระเบียนรายการอื่นแล้ว");
+            ViewData["DuplicateAuthenticationCode"] = authenticationCode;
+            model.EditRecordId = id;
+            return View("Index", await BuildDashboard(
+                clinicCode, "พบ Authentication Code ซ้ำในระบบ", model.Input.PatientId, model));
+        }
+
+        record.PatientId = patient.Id;
+        record.VisitDate = model.Input.VisitDate;
+        record.ServiceRecipientId = model.Input.ServiceRecipientId?.Trim() ?? string.Empty;
+        record.AuthenticationCode = authenticationCode;
+        record.IsSelfPay = model.Input.IsSelfPay;
+        record.CitizenId = patient.CitizenId;
+        record.Diagnosis = model.Input.Diagnosis.Trim();
+        record.PrimaryIcd10Code = NormalizeIcdCode(model.Input.PrimaryIcd10Code);
+        record.DifferentialIcd10Codes = NormalizeIcdCodeList(model.Input.DifferentialIcd10Codes);
+        record.InitialDifferentialDiagnosis = model.Input.InitialDifferentialDiagnosis?.Trim() ?? string.Empty;
+        record.ChiefComplaint = model.Input.ChiefComplaint?.Trim() ?? string.Empty;
+        record.PresentIllness = model.Input.PresentIllness?.Trim() ?? string.Empty;
+        record.PhysicalExam = model.Input.PhysicalExam?.Trim() ?? string.Empty;
+        record.TemperatureCelsius = model.Input.TemperatureCelsius;
+        record.PulseRate = model.Input.PulseRate;
+        record.RespiratoryRate = model.Input.RespiratoryRate;
+        record.SystolicPressure = model.Input.SystolicPressure;
+        record.DiastolicPressure = model.Input.DiastolicPressure;
+        record.WeightKilograms = model.Input.WeightKilograms;
+        record.HeightCentimeters = model.Input.HeightCentimeters;
+        record.BodyMassIndex = CalculateBmi(model.Input.WeightKilograms, model.Input.HeightCentimeters);
+        record.ProblemPhysicalExam = model.Input.ProblemPhysicalExam?.Trim() ?? string.Empty;
+        record.TreatmentAndAdvice = model.Input.TreatmentAndAdvice?.Trim() ?? string.Empty;
+        record.ReferralDetail = model.Input.ReferralDetail?.Trim() ?? string.Empty;
+        record.FollowUpNone = model.Input.FollowUpNone;
+        record.FollowUpPhone = model.Input.FollowUpPhone;
+        record.FollowUpClinic = model.Input.FollowUpClinic;
+        record.FollowUpClinicNote = model.Input.FollowUpClinic ? model.Input.FollowUpClinicNote : null;
+        record.FollowUpAppointmentDateTime = model.Input.FollowUpClinic ? model.Input.FollowUpAppointmentDateTime : null;
+        record.FollowUpOther = model.Input.FollowUpOther;
+        record.FollowUpOtherNote = model.Input.FollowUpOther ? model.Input.FollowUpOtherNote : null;
+        record.ServiceEndDateTime = model.Input.ServiceEndDateTime;
+        record.IsChildCase = model.Input.IsChildCase;
+        record.ChildGrowthStatus = model.Input.IsChildCase ? model.Input.ChildGrowthStatus : null;
+        record.ChildDevelopmentStatus = model.Input.IsChildCase ? model.Input.ChildDevelopmentStatus : null;
+        record.ChildVaccineStatus = model.Input.IsChildCase ? model.Input.ChildVaccineStatus : null;
+        record.ChildVaccineNote = model.Input.IsChildCase ? model.Input.ChildVaccineNote : null;
+        record.Note = model.Input.Note;
+
+        if (model.Input.OpdPdfFile is { Length: > 0 } pdf)
+        {
+            if (!Path.GetExtension(pdf.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError("Input.OpdPdfFile", "รองรับเฉพาะไฟล์ PDF เท่านั้น");
+                model.EditRecordId = id;
+                return View("Index", await BuildDashboard(
+                    clinicCode, "ไฟล์ไม่ใช่ PDF", model.Input.PatientId, model));
+            }
+
+            await using var stream = new MemoryStream();
+            await pdf.CopyToAsync(stream);
+            record.OpdPdfData = stream.ToArray();
+            record.OpdContentType = "application/pdf";
+        }
+
+        record.OpdFileName = BuildOpdPdfFileName(patient.CitizenId, record.AuthenticationCode);
+        await dbContext.SaveChangesAsync();
+        TempData["StatusModal"] = "record-updated";
+        return RedirectToAction(nameof(Index), new { patientId = patient.Id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var clinicCode = await GetClinicCode();
+        var record = await dbContext.TreatmentRecords
+            .FirstOrDefaultAsync(x => x.Id == id && x.ClinicCode == clinicCode);
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        var patientId = record.PatientId;
+        dbContext.TreatmentRecords.Remove(record);
+        await dbContext.SaveChangesAsync();
+        TempData["StatusModal"] = "record-deleted";
+        return RedirectToAction(nameof(Index), new { patientId });
     }
 
     [HttpGet]
@@ -222,6 +489,12 @@ public class MedicalRecordsController : Controller
             return NotFound();
         }
 
+        var clinicLogoUrl = await dbContext.Clinics
+            .AsNoTracking()
+            .Where(x => x.ClinicCode == clinicCode)
+            .Select(x => x.LogoPath)
+            .FirstOrDefaultAsync();
+
         var hasSignature = await dbContext.SignImgs
             .AsNoTracking()
             .AnyAsync(x => x.ClinicCode == clinicCode && x.CitizenId == record.Patient.CitizenId);
@@ -240,6 +513,7 @@ public class MedicalRecordsController : Controller
         {
             RecordId = record.Id,
             ClinicCode = clinicCode,
+            ClinicLogoUrl = clinicLogoUrl,
             PatientName = record.Patient.FullName,
             CitizenId = record.Patient.CitizenId,
             Address = record.Patient.Address,
@@ -255,6 +529,14 @@ public class MedicalRecordsController : Controller
             ChiefComplaint = record.ChiefComplaint,
             PresentIllness = record.PresentIllness,
             PhysicalExam = record.PhysicalExam,
+            TemperatureCelsius = record.TemperatureCelsius,
+            PulseRate = record.PulseRate,
+            RespiratoryRate = record.RespiratoryRate,
+            SystolicPressure = record.SystolicPressure,
+            DiastolicPressure = record.DiastolicPressure,
+            WeightKilograms = record.WeightKilograms,
+            HeightCentimeters = record.HeightCentimeters,
+            BodyMassIndex = record.BodyMassIndex,
             ProblemPhysicalExam = record.ProblemPhysicalExam,
             TreatmentAndAdvice = record.TreatmentAndAdvice,
             ReferralDetail = record.ReferralDetail,
@@ -279,10 +561,139 @@ public class MedicalRecordsController : Controller
         return View(model);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> SelfPayConsent(int id)
+    {
+        var clinicCode = await GetClinicCode();
+        var record = await dbContext.TreatmentRecords
+            .AsNoTracking()
+            .Include(x => x.Patient)
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.ClinicCode == clinicCode &&
+                x.IsSelfPay);
+
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        var clinic = await dbContext.Clinics
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ClinicCode == clinicCode);
+        var hasPatientSignature = await dbContext.SignImgs
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.ClinicCode == clinicCode &&
+                x.CitizenId == record.Patient.CitizenId);
+
+        string? providerNamePrefix = null;
+        var hasProviderSignature = false;
+        if (!string.IsNullOrWhiteSpace(record.ProviderUserId))
+        {
+            var providerInfo = await dbContext.Users
+                .AsNoTracking()
+                .Where(x => x.Id == record.ProviderUserId)
+                .Select(x => new
+                {
+                    x.NamePrefix,
+                    HasSignature = x.ProviderSignatureImageData != null
+                })
+                .FirstOrDefaultAsync();
+            providerNamePrefix = providerInfo?.NamePrefix;
+            hasProviderSignature = providerInfo?.HasSignature == true;
+        }
+
+        return View(new SelfPayConsentViewModel
+        {
+            RecordId = record.Id,
+            ClinicName = clinic?.ClinicName ?? "SmartClinic",
+            ClinicAddress = clinic?.Address ?? string.Empty,
+            ClinicPhoneNumber = clinic?.PhoneNumber ?? string.Empty,
+            ClinicCode = clinicCode,
+            ClinicLogoUrl = clinic?.LogoPath,
+            PatientName = record.Patient.FullName,
+            CitizenId = record.Patient.CitizenId,
+            VisitDateText = record.VisitDate.ToString(
+                "d MMMM yyyy",
+                new CultureInfo("th-TH")),
+            AuthenticationCode = record.AuthenticationCode,
+            PatientSignatureUrl = Url.Action(
+                "ImageByCitizen",
+                "Signatures",
+                new { citizenId = record.Patient.CitizenId }),
+            HasPatientSignature = hasPatientSignature,
+            ProviderName = BuildPersonName(providerNamePrefix, record.ProviderName),
+            ProviderProfessionalTitle = record.ProviderProfessionalTitle,
+            ProviderSignatureUrl = string.IsNullOrWhiteSpace(record.ProviderUserId)
+                ? null
+                : Url.Action(
+                    nameof(ProviderSignature),
+                    "MedicalRecords",
+                    new { userId = record.ProviderUserId }),
+            HasProviderSignature = hasProviderSignature
+        });
+    }
+
     private async Task<string> GetClinicCode()
     {
         var user = await userManager.GetUserAsync(User);
         return user?.ClinicCode ?? "SMARTCLINIC";
+    }
+
+    private void ValidateAppointment(MedicalRecordsDashboardViewModel model)
+    {
+        var selectedFollowUps = new[] { model.Input.FollowUpNone, model.Input.FollowUpPhone, model.Input.FollowUpClinic, model.Input.FollowUpOther }.Count(x => x);
+        if (selectedFollowUps > 1)
+            ModelState.AddModelError(string.Empty, "กรุณาเลือกวิธีติดตามผู้รับบริการเพียงหนึ่งรายการ");
+        if (model.Input.FollowUpClinic && !model.Input.FollowUpAppointmentDateTime.HasValue)
+            ModelState.AddModelError("Input.FollowUpAppointmentDateTime", "กรุณาระบุวันและเวลานัดหมาย");
+        if (model.Input.FollowUpAppointmentDateTime.HasValue && model.Input.FollowUpAppointmentDateTime < model.Input.VisitDate)
+            ModelState.AddModelError("Input.FollowUpAppointmentDateTime", "วันนัดหมายต้องไม่ก่อนวันที่เข้ารับบริการ");
+    }
+
+    private static string NormalizeIcdCode(string? value) =>
+        Regex.Replace(value ?? string.Empty, @"[^A-Za-z0-9]", string.Empty).ToUpperInvariant();
+
+    private static string NormalizeIcdCodeList(string? value) => string.Join(",",
+        (value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeIcdCode).Where(x => x.Length >= 3).Distinct());
+
+    private static decimal? CalculateBmi(decimal? weightKilograms, decimal? heightCentimeters)
+    {
+        if (!weightKilograms.HasValue || !heightCentimeters.HasValue || weightKilograms <= 0 || heightCentimeters <= 0) return null;
+        var heightMeters = heightCentimeters.Value / 100m;
+        return Math.Round(weightKilograms.Value / (heightMeters * heightMeters), 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static decimal? ExtractDecimal(string text, string pattern)
+    {
+        var match = Regex.Match(text ?? string.Empty, pattern, RegexOptions.IgnoreCase);
+        return match.Success && decimal.TryParse(match.Groups["value"].Value.Replace(',', '.'), System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var value) ? value : null;
+    }
+
+    private static int? ExtractInt(string text, string pattern)
+    {
+        var match = Regex.Match(text ?? string.Empty, pattern, RegexOptions.IgnoreCase);
+        return match.Success && int.TryParse(match.Groups["value"].Value, out var value) ? value : null;
+    }
+
+    private static string BuildPersonName(string? prefix, string? fullName)
+    {
+        var name = (fullName ?? string.Empty).Trim();
+        var knownPrefixes = new[] { "นางสาว", "นาย", "นาง" };
+        var existingPrefix = knownPrefixes.FirstOrDefault(x =>
+            name.StartsWith(x, StringComparison.Ordinal));
+
+        if (!string.IsNullOrWhiteSpace(existingPrefix))
+        {
+            name = name[existingPrefix.Length..].TrimStart();
+        }
+
+        return string.IsNullOrWhiteSpace(prefix)
+            ? (string.IsNullOrWhiteSpace(existingPrefix) ? name : $"{existingPrefix}{name}")
+            : $"{prefix.Trim()}{name}";
     }
 
     private static string BuildOpdPdfFileName(string citizenId, string authenticationCode)
@@ -323,7 +734,9 @@ public class MedicalRecordsController : Controller
         string clinicCode,
         string statusMessage,
         int? selectedPatientId = null,
-        MedicalRecordsDashboardViewModel? existingModel = null)
+        MedicalRecordsDashboardViewModel? existingModel = null,
+        int page = 1,
+        string? searchTerm = null)
     {
         var patients = await dbContext.Patients
             .Where(x => x.ClinicCode == clinicCode)
@@ -345,10 +758,29 @@ public class MedicalRecordsController : Controller
             query = query.Where(x => x.PatientId == selectedPatientId.Value);
         }
 
+        var normalizedSearch = searchTerm?.Trim();
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            query = query.Where(x =>
+                x.Patient.FullName.Contains(normalizedSearch) ||
+                x.Patient.CitizenId.Contains(normalizedSearch));
+        }
+
+        var totalItems = await query.CountAsync();
+        var usedOpdRecords = await dbContext.TreatmentRecords.AsNoTracking()
+            .CountAsync(x => x.ClinicCode == clinicCode);
+        var clinic = await dbContext.Clinics.AsNoTracking().FirstOrDefaultAsync(x => x.ClinicCode == clinicCode);
+        var currentUser = await userManager.GetUserAsync(User);
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalItems / (double)MedicalRecordsDashboardViewModel.PageSize));
+        var requestedPage = existingModel?.CurrentPage > 0 ? existingModel.CurrentPage : page;
+        var currentPage = Math.Clamp(requestedPage, 1, totalPages);
+        var skip = (currentPage - 1) * MedicalRecordsDashboardViewModel.PageSize;
+
         var records = await query
             .OrderByDescending(x => x.VisitDate)
             .ThenByDescending(x => x.CreatedAtUtc)
-            .Take(30)
+            .Skip(skip)
+            .Take(MedicalRecordsDashboardViewModel.PageSize)
             .Select(x => new MedicalRecordItemViewModel
             {
                 Id = x.Id,
@@ -358,6 +790,7 @@ public class MedicalRecordsController : Controller
                 VisitDateText = x.VisitDate.ToString("dd/MM/yyyy HH:mm"),
                 ServiceRecipientId = x.ServiceRecipientId,
                 AuthenticationCode = x.AuthenticationCode,
+                IsSelfPay = x.IsSelfPay,
                 Diagnosis = x.Diagnosis,
                 FileName = x.OpdFileName,
                 CreatedAtText = x.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
@@ -370,14 +803,70 @@ public class MedicalRecordsController : Controller
             input.PatientId = selectedPatientId;
         }
 
+        if (selectedPatientId.HasValue && existingModel is null)
+        {
+            var selectedPatient = await dbContext.Patients.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == selectedPatientId.Value && x.ClinicCode == clinicCode);
+            if (selectedPatient is not null)
+            {
+                input.CitizenId = selectedPatient.CitizenId;
+                var defaults = await GetPatientTreatmentDefaults(clinicCode, [selectedPatient.Id]);
+                if (defaults.TryGetValue(selectedPatient.Id, out var values))
+                {
+                    input.ServiceRecipientId = values.ServiceRecipientId;
+                }
+            }
+        }
+
         return new MedicalRecordsDashboardViewModel
         {
             Input = input,
+            EditRecordId = existingModel?.EditRecordId,
             PatientOptions = patients,
             Records = records,
-            StatusMessage = statusMessage
+            CurrentPage = currentPage,
+            TotalItems = totalItems,
+            TotalPages = totalPages,
+            SearchTerm = normalizedSearch ?? string.Empty,
+            StatusMessage = statusMessage,
+            OpdRecordLimit = clinic?.OpdRecordLimit ?? 30,
+            UsedOpdRecords = usedOpdRecords,
+            IsUnlimited = clinic?.HasUnlimitedOpdRecords ?? User.IsInRole("SuperAdmin"),
+            ContactName = clinic?.FullName ?? currentUser?.FullName ?? string.Empty,
+            ContactPhone = clinic?.PhoneNumber ?? currentUser?.PhoneNumber ?? string.Empty
         };
     }
+
+    private async Task<Dictionary<int, PatientTreatmentDefaults>> GetPatientTreatmentDefaults(
+        string clinicCode,
+        IReadOnlyCollection<int> patientIds)
+    {
+        if (patientIds.Count == 0) return [];
+
+        var profiles = await dbContext.PatientMedicalProfiles.AsNoTracking()
+            .Where(x => x.ClinicCode == clinicCode && patientIds.Contains(x.PatientId))
+            .Select(x => new { x.PatientId, x.ServiceRecipientId })
+            .ToDictionaryAsync(x => x.PatientId, x => x.ServiceRecipientId);
+
+        var latestRecords = await dbContext.TreatmentRecords.AsNoTracking()
+            .Where(x => x.ClinicCode == clinicCode && patientIds.Contains(x.PatientId))
+            .OrderByDescending(x => x.VisitDate)
+            .ThenByDescending(x => x.CreatedAtUtc)
+            .Select(x => new { x.PatientId, x.ServiceRecipientId, x.AuthenticationCode })
+            .ToListAsync();
+
+        return patientIds.ToDictionary(
+            patientId => patientId,
+            patientId =>
+            {
+                var latest = latestRecords.FirstOrDefault(x => x.PatientId == patientId);
+                var profileServiceId = profiles.GetValueOrDefault(patientId);
+                return new PatientTreatmentDefaults(
+                    string.IsNullOrWhiteSpace(profileServiceId) ? latest?.ServiceRecipientId ?? string.Empty : profileServiceId);
+            });
+    }
+
+    private sealed record PatientTreatmentDefaults(string ServiceRecipientId);
 
     private static MedicalRecordPdfImportViewModel ParseMedicalRecordPdf(string rawText)
     {
@@ -401,6 +890,16 @@ public class MedicalRecordsController : Controller
         var physicalExam = SectionBetween(text,
             @"การตรวจร่างกาย",
             @"การตรวจร่างกายตามปัญหาของผู้ป่วย");
+
+        var vitalText = CleanPdfValue(physicalExam);
+        var temperature = ExtractDecimal(vitalText, @"(?:อุณหภูมิ|Temp(?:erature)?)\s*[:=]?\s*(?<value>\d{2}(?:[\.,]\d{1,2})?)");
+        var pulse = ExtractInt(vitalText, @"(?:ชีพจร|Pulse|PR)\s*[:=]?\s*(?<value>\d{2,3})");
+        var respiratory = ExtractInt(vitalText, @"(?:หายใจ|การหายใจ|Resp(?:iratory)?|RR)\s*[:=]?\s*(?<value>\d{1,3})");
+        var bloodPressure = Regex.Match(vitalText, @"(?:BP|ความดัน(?:โลหิต)?)\s*[:=]?\s*(?<sys>\d{2,3})\s*[/\\]\s*(?<dia>\d{2,3})", RegexOptions.IgnoreCase);
+        var weight = ExtractDecimal(vitalText, @"(?:น้ำหนัก|Weight|Wt)\s*[:=]?\s*(?<value>\d{1,3}(?:[\.,]\d{1,2})?)");
+        var height = ExtractDecimal(vitalText, @"(?:ส่วนสูง|Height|Ht)\s*[:=]?\s*(?<value>\d{2,3}(?:[\.,]\d{1,2})?)");
+        var systolic = bloodPressure.Success && int.TryParse(bloodPressure.Groups["sys"].Value, out var sys) ? sys : (int?)null;
+        var diastolic = bloodPressure.Success && int.TryParse(bloodPressure.Groups["dia"].Value, out var dia) ? dia : (int?)null;
 
         var problemPhysicalExam = SectionBetween(text,
             @"การตรวจร่างกายตามปัญหาของผู้ป่วย",
@@ -446,6 +945,14 @@ public class MedicalRecordsController : Controller
             ChiefComplaint = CleanPdfValue(chiefComplaint),
             PresentIllness = CleanPdfValue(presentIllness),
             PhysicalExam = CleanPdfValue(physicalExam),
+            TemperatureCelsius = temperature,
+            PulseRate = pulse,
+            RespiratoryRate = respiratory,
+            SystolicPressure = systolic,
+            DiastolicPressure = diastolic,
+            WeightKilograms = weight,
+            HeightCentimeters = height,
+            BodyMassIndex = CalculateBmi(weight, height),
             ProblemPhysicalExam = CleanPdfValue(problemPhysicalExam),
             TreatmentAndAdvice = CleanPdfValue(treatmentAndAdvice),
             ReferralDetail = CleanPdfValue(referralDetail),
@@ -670,9 +1177,12 @@ public class MedicalRecordsController : Controller
         if (record.FollowUpPhone) items.Add("ติดตามทางโทรศัพท์");
         if (record.FollowUpClinic)
         {
+            var appointment = record.FollowUpAppointmentDateTime.HasValue
+                ? $" วันที่ {record.FollowUpAppointmentDateTime.Value:dd/MM/yyyy เวลา HH:mm น.}"
+                : string.Empty;
             items.Add(string.IsNullOrWhiteSpace(record.FollowUpClinicNote)
-                ? "นัดตามที่คลินิก"
-                : $"นัดตามที่คลินิก: {record.FollowUpClinicNote}");
+                ? $"นัดตามที่คลินิก{appointment}"
+                : $"นัดตามที่คลินิก{appointment}: {record.FollowUpClinicNote}");
         }
         if (record.FollowUpOther)
         {

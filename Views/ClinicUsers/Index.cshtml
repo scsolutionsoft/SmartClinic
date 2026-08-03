@@ -6,16 +6,17 @@
 <section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
     <div class="row align-items-center g-4">
         <div class="col-lg-8">
-            <span class="badge bg-light text-dark mb-3">User Management</span>
+            <span class="hero-symbol mb-3" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 11c1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3 1.3 3 3 3ZM8 11c2.2 0 4-1.8 4-4S10.2 3 8 3 4 4.8 4 7s1.8 4 4 4Zm8 2c-2 0-6 1-6 3v3h12v-3c0-2-4-3-6-3ZM8 13c-3.1 0-7 1.6-7 4v2h7v-3c0-1.1.4-2.1 1.2-2.9L8 13Z"/></svg></span>
             <h1 class="display-5 fw-semibold mb-3">จัดการผู้ใช้งานคลินิก</h1>
             <p class="lead mb-0">สร้างบัญชีพยาบาลและเจ้าหน้าที่ พร้อมกำหนดสิทธิ์ตามบทบาท และบังคับเปลี่ยนรหัสผ่านครั้งแรก</p>
         </div>
         <div class="col-lg-4">
             <div class="glass-card p-3 p-lg-4 rounded-4">
-                <div class="fw-semibold mb-2">@Model.StatusMessage</div>
-                <div class="small opacity-75">- Default password = phone</div>
-                <div class="small opacity-75">- Must change on first login</div>
-                <div class="small opacity-75">- Role based control</div>
+                <div class="hero-mini-stats">
+                    <span><strong>@Model.Users.Count</strong><small>บัญชี</small></span>
+                    <span><strong>RBAC</strong><small>สิทธิ์</small></span>
+                    <span><strong>✓</strong><small>ปลอดภัย</small></span>
+                </div>
             </div>
         </div>
     </div>
@@ -53,6 +54,16 @@
                         <label asp-for="Input.UserName" class="form-label"></label>
                         <input asp-for="Input.UserName" class="form-control" />
                         <span asp-validation-for="Input.UserName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.NamePrefix" class="form-label"></label>
+                        <select asp-for="Input.NamePrefix" class="form-select">
+                            <option value="">-- เลือกคำนำหน้าชื่อ --</option>
+                            <option value="นาย">นาย</option>
+                            <option value="นาง">นาง</option>
+                            <option value="นางสาว">นางสาว</option>
+                        </select>
+                        <span asp-validation-for="Input.NamePrefix" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="Input.FullName" class="form-label"></label>
@@ -184,50 +195,115 @@
                 <div class="modal-body">
                     <form asp-action="Edit" method="post" class="row g-3 mb-4">
                         @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@user.Id" />
-                        <div class="col-md-6">
+                        <input type="hidden" name="Id" value="@user.Id" />
+                        <div class="col-md-4">
+                            <label class="form-label">คำนำหน้าชื่อ</label>
+                            <select name="NamePrefix" class="form-select" required>
+                                <option value="">-- เลือก --</option>
+                                @foreach (var prefix in new[] { "นาย", "นาง", "นางสาว" })
+                                {
+                                    if (prefix == user.NamePrefix)
+                                    {
+                                        <option value="@prefix" selected>@prefix</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@prefix">@prefix</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-8">
                             <label class="form-label">ชื่อ-นามสกุล</label>
-                            <input name="fullName" value="@user.FullName" class="form-control" required />
+                            <input name="FullName" value="@user.FullName" class="form-control" required />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">เบอร์โทร</label>
-                            <input name="phoneNumber" value="@user.PhoneNumber" class="form-control" required />
+                            <input name="PhoneNumber" value="@user.PhoneNumber" class="form-control" required />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">อีเมล</label>
-                            <input name="email" value="@user.Email" class="form-control" />
+                            <input name="Email" value="@user.Email" type="email" class="form-control" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Role</label>
-                            <select name="roleName" class="form-select">
+                            <select name="RoleName" class="form-select" required>
                                 @foreach (var role in Model.RoleOptions)
                                 {
-                                    <option value="@role" selected="@(role == user.RoleName)">@role</option>
+                                    if (role == user.RoleName)
+                                    {
+                                        <option value="@role" selected>@role</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@role">@role</option>
+                                    }
                                 }
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">ตำแหน่ง/วิชาชีพ</label>
-                            <input name="professionalTitle" value="@user.ProfessionalTitle" class="form-control" />
+                            <input name="ProfessionalTitle" value="@user.ProfessionalTitle" class="form-control" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">เลขใบประกอบวิชาชีพ</label>
-                            <input name="licenseNo" value="@user.LicenseNo" class="form-control" />
+                            <input name="LicenseNo" value="@user.LicenseNo" class="form-control" />
                         </div>
                         <div class="col-12 text-end">
+                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">ยกเลิก</button>
                             <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
                         </div>
                     </form>
 
-                    <form asp-action="UploadProviderSignature" method="post" enctype="multipart/form-data" class="border-top pt-3">
+                    <div class="border-top pt-3" data-provider-signature-editor>
+                    <div class="form-check form-switch signature-background-option mb-3">
+                        <input class="form-check-input provider-remove-background" type="checkbox" role="switch" id="providerRemoveBackground-@user.Id" checked />
+                        <label class="form-check-label fw-semibold" for="providerRemoveBackground-@user.Id">ลบพื้นหลังสีขาว/เทาอ่อนก่อนบันทึก</label>
+                        <div class="form-text">สามารถปิดตัวเลือกเพื่อเก็บพื้นหลังเดิมได้</div>
+                    </div>
+
+                    <form asp-action="UploadProviderSignature" method="post" enctype="multipart/form-data" class="provider-signature-upload-form mb-3">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@user.Id" />
                         <label class="form-label">อัปโหลดลายเซ็นผู้ให้บริการ</label>
                         <div class="input-group">
-                            <input type="file" name="signatureFile" accept="image/png,image/jpeg,image/webp" class="form-control" required />
+                            <input type="file" name="signatureFile" accept="image/png,image/jpeg,image/webp" class="form-control provider-signature-file" required />
                             <button type="submit" class="btn btn-outline-primary">อัปโหลดลายเซ็น</button>
                         </div>
+                        <div class="signature-background-preview mt-3 provider-signature-comparison" hidden>
+                            <div>
+                                <div class="small fw-semibold mb-2">ภาพต้นฉบับ</div>
+                                <div class="signature-preview-pane signature-preview-checkerboard">
+                                    <img class="provider-original-preview" alt="ลายเซ็นต้นฉบับ" />
+                                </div>
+                            </div>
+                            <div>
+                                <div class="small fw-semibold mb-2 provider-result-label">ผลลัพธ์หลังลบพื้นหลัง</div>
+                                <div class="signature-preview-pane signature-preview-checkerboard">
+                                    <img class="provider-result-preview" alt="ผลลัพธ์ลายเซ็นก่อนบันทึก" />
+                                </div>
+                            </div>
+                        </div>
                     </form>
+
+                    <div class="border rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">เซ็นด้วยปากกา เมาส์ หรือนิ้ว</label>
+                            <span class="badge text-bg-light provider-pointer-status">พร้อมเซ็น</span>
+                        </div>
+                        <canvas class="signature-capture-canvas provider-signature-canvas" aria-label="พื้นที่เขียนลายเซ็นผู้ให้บริการ"></canvas>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <button type="button" class="btn btn-outline-secondary btn-sm provider-signature-undo">ย้อนกลับ</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm provider-signature-clear">ล้าง</button>
+                            <button type="button" class="btn btn-primary btn-sm ms-auto provider-signature-save">บันทึกลายเซ็น PNG</button>
+                        </div>
+                    </div>
+                    <form asp-action="CaptureProviderSignature" method="post" class="provider-signature-capture-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@user.Id" />
+                        <input type="hidden" name="signatureData" class="provider-signature-data" />
+                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -236,6 +312,202 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function initializeProviderSignatureEditors() {
+            const signatureInkColor = '#0057B8';
+
+            async function removeLightBackground(file) {
+                if (file.size > 5 * 1024 * 1024) throw new Error('ไฟล์ต้องมีขนาดไม่เกิน 5 MB');
+                const bitmap = await createImageBitmap(file);
+                const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+                canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+                const context = canvas.getContext('2d', { willReadFrequently: true });
+                context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                bitmap.close();
+                const image = context.getImageData(0, 0, canvas.width, canvas.height);
+                for (let index = 0; index < image.data.length; index += 4) {
+                    const red = image.data[index];
+                    const green = image.data[index + 1];
+                    const blue = image.data[index + 2];
+                    const lightest = Math.max(red, green, blue);
+                    const darkest = Math.min(red, green, blue);
+                    if (darkest >= 210 && lightest - darkest <= 45) {
+                        image.data[index + 3] = Math.round(
+                            image.data[index + 3] * Math.max(0, Math.min(1, (255 - darkest) / 45)));
+                    }
+                }
+                context.putImageData(image, 0, 0);
+                return canvas.toDataURL('image/png');
+            }
+
+            document.querySelectorAll('[data-provider-signature-editor]').forEach(function (editor) {
+                const modal = editor.closest('.modal');
+                const canvas = editor.querySelector('.provider-signature-canvas');
+                const context = canvas.getContext('2d');
+                const strokes = [];
+                let activeStroke = null;
+                let drawing = false;
+                let originalUrl = null;
+
+                function drawStroke(stroke) {
+                    if (!stroke.length) return;
+                    context.beginPath();
+                    context.moveTo(stroke[0].x, stroke[0].y);
+                    for (let index = 1; index < stroke.length; index++) {
+                        const previous = stroke[index - 1];
+                        const point = stroke[index];
+                        context.lineWidth = point.width;
+                        context.quadraticCurveTo(
+                            previous.x, previous.y,
+                            (previous.x + point.x) / 2,
+                            (previous.y + point.y) / 2);
+                    }
+                    if (stroke.length === 1) context.lineTo(stroke[0].x + 0.1, stroke[0].y + 0.1);
+                    context.stroke();
+                }
+
+                function redraw() {
+                    const rect = canvas.getBoundingClientRect();
+                    context.clearRect(0, 0, rect.width, rect.height);
+                    context.lineCap = 'round';
+                    context.lineJoin = 'round';
+                    context.strokeStyle = signatureInkColor;
+                    strokes.forEach(drawStroke);
+                }
+
+                function resizeCanvas() {
+                    const rect = canvas.getBoundingClientRect();
+                    const ratio = Math.max(1, window.devicePixelRatio || 1);
+                    canvas.width = Math.max(1, Math.round(rect.width * ratio));
+                    canvas.height = Math.max(1, Math.round(rect.height * ratio));
+                    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+                    redraw();
+                }
+
+                function getPoint(event) {
+                    const rect = canvas.getBoundingClientRect();
+                    const pressure = event.pointerType === 'pen' && event.pressure > 0 ? event.pressure : 0.5;
+                    return {
+                        x: event.clientX - rect.left,
+                        y: event.clientY - rect.top,
+                        width: Math.max(1.5, 1.5 + pressure * 3.5)
+                    };
+                }
+
+                canvas.addEventListener('pointerdown', function (event) {
+                    event.preventDefault();
+                    canvas.setPointerCapture(event.pointerId);
+                    drawing = true;
+                    activeStroke = [getPoint(event)];
+                    strokes.push(activeStroke);
+                    editor.querySelector('.provider-pointer-status').textContent =
+                        event.pointerType === 'pen' ? 'ตรวจพบปากกา' : event.pointerType === 'touch' ? 'ตรวจพบการสัมผัส' : 'ตรวจพบเมาส์';
+                    redraw();
+                });
+                canvas.addEventListener('pointermove', function (event) {
+                    if (!drawing || !activeStroke) return;
+                    event.preventDefault();
+                    activeStroke.push(getPoint(event));
+                    redraw();
+                });
+                const finishStroke = event => {
+                    drawing = false;
+                    activeStroke = null;
+                    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+                };
+                canvas.addEventListener('pointerup', finishStroke);
+                canvas.addEventListener('pointercancel', finishStroke);
+
+                editor.querySelector('.provider-signature-undo').addEventListener('click', function () {
+                    strokes.pop();
+                    redraw();
+                });
+                editor.querySelector('.provider-signature-clear').addEventListener('click', function () {
+                    strokes.length = 0;
+                    redraw();
+                });
+                editor.querySelector('.provider-signature-save').addEventListener('click', function () {
+                    if (!strokes.some(stroke => stroke.length >= 2)) {
+                        smartClinicStatusModal.show({
+                            type: 'warning',
+                            subtitle: 'Provider signature',
+                            state: 'No signature',
+                            stateDescription: 'ยังไม่มีลายเซ็น',
+                            message: 'กรุณาเซ็นชื่อในพื้นที่ลายเซ็นก่อนบันทึก',
+                            actionText: 'กลับไปเซ็น'
+                        });
+                        return;
+                    }
+                    editor.querySelector('.provider-signature-data').value = canvas.toDataURL('image/png');
+                    editor.querySelector('.provider-signature-capture-form').submit();
+                });
+
+                const fileInput = editor.querySelector('.provider-signature-file');
+                const removeOption = editor.querySelector('.provider-remove-background');
+                const comparison = editor.querySelector('.provider-signature-comparison');
+
+                async function updateFilePreview() {
+                    const file = fileInput.files?.[0];
+                    if (!file) {
+                        comparison.hidden = true;
+                        return;
+                    }
+                    if (originalUrl) URL.revokeObjectURL(originalUrl);
+                    originalUrl = URL.createObjectURL(file);
+                    editor.querySelector('.provider-original-preview').src = originalUrl;
+                    if (removeOption.checked) {
+                        editor.querySelector('.provider-result-preview').src = await removeLightBackground(file);
+                        editor.querySelector('.provider-result-label').textContent = 'ผลลัพธ์หลังลบพื้นหลัง';
+                    } else {
+                        editor.querySelector('.provider-result-preview').src = originalUrl;
+                        editor.querySelector('.provider-result-label').textContent = 'ผลลัพธ์เมื่อเก็บพื้นหลังเดิม';
+                    }
+                    comparison.hidden = false;
+                }
+
+                fileInput.addEventListener('change', function () {
+                    updateFilePreview().catch(error => {
+                        alert(error?.message || 'ไม่สามารถแสดงตัวอย่างได้');
+                        fileInput.value = '';
+                        comparison.hidden = true;
+                    });
+                });
+                removeOption.addEventListener('change', function () {
+                    if (fileInput.files?.length) fileInput.dispatchEvent(new Event('change'));
+                });
+                editor.querySelector('.provider-signature-upload-form').addEventListener('submit', async function (event) {
+                    if (!removeOption.checked) return;
+                    event.preventDefault();
+                    if (!fileInput.files?.[0]) {
+                        alert('กรุณาเลือกไฟล์ลายเซ็น');
+                        return;
+                    }
+                    try {
+                        editor.querySelector('.provider-signature-data').value =
+                            await removeLightBackground(fileInput.files[0]);
+                        editor.querySelector('.provider-signature-capture-form').submit();
+                    } catch (error) {
+                        alert(error?.message || 'ไม่สามารถลบพื้นหลังได้');
+                    }
+                });
+
+                modal.addEventListener('shown.bs.modal', function () {
+                    strokes.length = 0;
+                    editor.querySelector('.provider-pointer-status').textContent = 'พร้อมเซ็น';
+                    resizeCanvas();
+                });
+                modal.addEventListener('hidden.bs.modal', function () {
+                    comparison.hidden = true;
+                    if (originalUrl) {
+                        URL.revokeObjectURL(originalUrl);
+                        originalUrl = null;
+                    }
+                });
+            });
+        })();
+    </script>
 
     @if ((TempData["StatusModal"] as string) == "clinic-user-created")
     {
@@ -253,6 +525,38 @@
                         { title: 'Initial password', detail: 'Set from phone number', time: 'Done' },
                         { title: 'Security policy', detail: 'Must change password on first login', time: 'Done' }
                     ]
+                });
+            });
+        </script>
+    }
+    else if ((TempData["StatusModal"] as string) is "clinic-user-edited" or "clinic-user-edit-error")
+    {
+        var editSucceeded = (TempData["StatusModal"] as string) == "clinic-user-edited";
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: '@(editSucceeded ? "success" : "danger")',
+                    subtitle: 'Clinic user',
+                    state: '@(editSucceeded ? "Updated" : "Update failed")',
+                    stateDescription: '@(editSucceeded ? "บันทึกข้อมูลสำเร็จ" : "ไม่สามารถบันทึกข้อมูลได้")',
+                    message: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["StatusMessage"] as string ?? "")),
+                    actionText: 'ปิด'
+                });
+            });
+        </script>
+    }
+    else if ((TempData["StatusModal"] as string) is "provider-signature-saved" or "provider-signature-error")
+    {
+        var signatureSaved = (TempData["StatusModal"] as string) == "provider-signature-saved";
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: '@(signatureSaved ? "success" : "danger")',
+                    subtitle: 'Provider signature',
+                    state: '@(signatureSaved ? "Saved" : "Failed")',
+                    stateDescription: '@(signatureSaved ? "บันทึกลายเซ็นสำเร็จ" : "ไม่สามารถบันทึกลายเซ็นได้")',
+                    message: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["StatusMessage"] as string ?? "")),
+                    actionText: 'ปิด'
                 });
             });
         </script>

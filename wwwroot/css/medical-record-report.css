@@ -1,0 +1,364 @@
+.amed-report-sheet {
+  --amed-ink: #17324d;
+  --amed-teal: #0796a8;
+  --amed-pale: #eaf7f8;
+  --amed-soft: #f7fbfc;
+  --amed-line: #d1e1e7;
+  padding: 9mm 11mm 25mm;
+  color: var(--amed-ink);
+  font-family: "Sarabun", "Leelawadee UI", Tahoma, sans-serif;
+  font-size: 13px;
+  line-height: 1.42;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.amed-report-header {
+  min-height: 34mm;
+  padding: 1mm 31mm 4mm;
+  border-bottom: 1.5px solid var(--amed-teal);
+}
+
+.amed-clinic-logo {
+  top: 1mm;
+  left: 1mm;
+  width: 22mm;
+  height: 21mm;
+}
+
+.amed-report-logo {
+  width: 19mm;
+  height: 16mm;
+  margin-bottom: .5mm;
+}
+
+.amed-service-box {
+  top: 0;
+  right: 0;
+  padding: 1.6mm 2.5mm;
+  border: 1px solid #b8cbd4;
+  border-radius: 1.5mm;
+  background: var(--amed-soft);
+  color: #526b7c;
+  font-size: 10.5px;
+}
+
+.amed-service-box strong { color: var(--amed-ink); font-size: 12px; }
+
+.amed-patient-photo {
+  position: static;
+  display: block;
+  width: 100%;
+  height: 28mm;
+  padding: 0;
+  border: 0;
+  border-radius: 1mm;
+}
+
+.amed-report-title {
+  margin: .5mm 0 1mm;
+  color: var(--amed-ink);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.amed-clinic-line { color: #526b7c; font-size: 10.5px; line-height: 1.35; }
+
+.amed-visit-line {
+  justify-content: center;
+  margin: 3mm 0 2mm;
+  padding: 2mm 3mm;
+  border: 1px solid var(--amed-line);
+  border-radius: 2mm;
+  background: var(--amed-soft);
+  color: #526b7c;
+  font-size: 11.5px;
+}
+
+.amed-visit-line strong { color: var(--amed-ink); font-size: 12.5px; }
+
+.amed-patient-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 25mm;
+  gap: 3mm;
+  align-items: stretch;
+  margin-bottom: 2.5mm;
+}
+
+.amed-patient-line {
+  align-content: center;
+  margin: 0;
+  padding: 1.6mm 2.5mm;
+  border-left: 3px solid var(--amed-teal);
+  background: var(--amed-pale);
+  color: #405a6c;
+  font-size: 12px;
+}
+
+.amed-patient-line strong { color: #102a43; font-size: 13.5px; font-weight: 800; }
+
+.amed-patient-photo-frame {
+  width: 25mm;
+  padding: 1mm;
+  border: 1px solid #9fb3bd;
+  border-radius: 1.8mm;
+  background: #fff;
+  text-align: center;
+}
+
+.amed-patient-photo-frame small {
+  display: block;
+  margin-top: .7mm;
+  color: #607483;
+  font-size: 8px;
+  line-height: 1.1;
+}
+
+.amed-section {
+  gap: 2mm;
+  margin: 0 0 1.5mm;
+  padding: 1.2mm 2mm;
+  border-bottom: 1px dotted var(--amed-line);
+}
+
+.amed-label { color: #29465a; font-size: 12px; font-weight: 750; }
+.amed-value { color: #102a43; font-size: 12.5px; }
+
+.amed-vital-summary {
+  gap: 1mm 5mm;
+  margin: 2.5mm 0;
+  padding: 2.2mm 2.8mm;
+  border: 1px solid #8bcbd3;
+  border-radius: 2mm;
+  background: #effafa;
+  color: #466477;
+  font-size: 11.5px;
+}
+
+.amed-vital-summary strong { color: #0b6875; font-size: 12.5px; }
+
+.amed-heading {
+  margin: 2mm 0 1mm;
+  padding: 1.4mm 2.3mm;
+  border-left: 3px solid var(--amed-teal);
+  border-radius: 0 1.5mm 1.5mm 0;
+  background: var(--amed-pale);
+  color: var(--amed-ink);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.amed-block {
+  min-height: 5mm;
+  padding: .5mm 2mm 1mm;
+  color: #263f54;
+  font-size: 12.5px;
+  line-height: 1.42;
+}
+
+.amed-child-row {
+  gap: 4mm;
+  padding: 1mm 2mm;
+  color: #405a6c;
+  font-size: 11.5px;
+}
+
+.amed-medicine-list { gap: 1.2mm; margin: 1mm 0 2mm; }
+
+.amed-medicine-item {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 6.5mm minmax(0, 1fr);
+  gap: 2mm;
+  align-items: start;
+  padding: 2mm 2.8mm;
+  border: 1px solid #dbe7eb;
+  border-left: 3px solid #8bcbd3;
+  border-radius: 2mm;
+  background: linear-gradient(90deg, #f7fbfc 0, #fff 46%);
+  color: #405a6c;
+  font-size: 11.5px;
+  line-height: 1.38;
+  text-indent: 0;
+}
+
+.amed-medicine-index {
+  display: grid;
+  width: 6mm;
+  height: 6mm;
+  place-items: center;
+  border-radius: 50%;
+  background: #0b8f9f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  text-indent: 0;
+}
+
+.amed-medicine-content { min-width: 0; text-indent: 0; }
+.amed-medicine-name { color: #102a43; font-size: 13px; font-weight: 850; line-height: 1.35; text-indent: 0; }
+
+.amed-medicine-usage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.8mm;
+  align-items: start;
+  margin-top: .7mm;
+  color: #405a6c;
+  text-indent: 0;
+}
+
+.amed-medicine-usage span {
+  flex: 0 0 auto;
+  padding: .25mm 1.3mm;
+  border-radius: 99px;
+  background: #e4f4f6;
+  color: #087987;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-indent: 0;
+}
+
+.amed-medicine-usage p { min-width: 0; margin: 0; line-height: 1.45; text-indent: 0; }
+
+.amed-advice-section {
+  margin: 2.2mm 0 2.8mm;
+  overflow: hidden;
+  border: 1px solid #b9deda;
+  border-radius: 2.2mm;
+  background: #fbfefd;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.amed-advice-heading {
+  display: flex;
+  gap: 2mm;
+  align-items: center;
+  padding: 1.7mm 2.5mm;
+  border-bottom: 1px solid #cfe7e4;
+  background: #eaf7f4;
+}
+
+.amed-advice-icon {
+  display: grid;
+  width: 5.5mm;
+  height: 5.5mm;
+  flex: 0 0 5.5mm;
+  place-items: center;
+  border-radius: 50%;
+  background: #148b7c;
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.amed-advice-heading strong,
+.amed-advice-heading small { display: block; }
+.amed-advice-heading strong { color: #175a53; font-size: 12.5px; font-weight: 800; }
+.amed-advice-heading small { margin-top: .15mm; color: #63817d; font-size: 9.5px; }
+
+.amed-advice-general {
+  padding: 1.8mm 3mm;
+  border-bottom: 1px dashed #d5e7e4;
+  color: #294e49;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.amed-advice-item {
+  display: grid;
+  grid-template-columns: 2mm minmax(0, 1fr);
+  gap: 1.8mm;
+  padding: 1.6mm 3mm;
+  color: #385b57;
+}
+
+.amed-advice-item + .amed-advice-item { border-top: 1px dashed #d9e9e7; }
+
+.amed-advice-bullet {
+  width: 1.5mm;
+  height: 1.5mm;
+  margin-top: 1.4mm;
+  border-radius: 50%;
+  background: #27a08f;
+}
+
+.amed-advice-item strong { display: block; color: #176c62; font-size: 10.5px; font-weight: 800; }
+.amed-advice-item p { margin: .4mm 0 0; color: #29465a; font-size: 11.5px; line-height: 1.42; }
+
+.amed-signature-grid {
+  gap: 14mm;
+  margin-top: 5mm;
+  color: var(--amed-ink);
+  font-size: 11px;
+}
+
+.amed-signature-title { color: #405a6c; font-size: 10.5px; font-weight: 650; }
+.amed-signature-img,.amed-signature-empty { width: 52mm; height: 15mm; margin-bottom: 1mm; }
+.amed-signature-box:nth-child(2) .amed-signature-img { width: 60mm; height: 18mm; filter: contrast(1.6) saturate(1.3) brightness(.84); }
+
+.amed-report-bottom {
+  left: 11mm;
+  right: 8mm;
+  bottom: 6mm;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 1.5mm 8mm;
+  color: #607483;
+}
+
+.amed-service-end {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: baseline;
+  gap: 2mm;
+  padding: 1.6mm 2.5mm;
+  border-left: 3px solid var(--amed-teal);
+  border-radius: 0 1.5mm 1.5mm 0;
+  background: var(--amed-pale);
+}
+
+.amed-service-end span {
+  color: #526b7c;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.amed-service-end strong {
+  color: var(--amed-ink);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.amed-revision-text {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+}
+
+.amed-revision-text,.amed-barcode { font-size: 9.5px; }
+.amed-barcode { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
+.amed-barcode svg { height: 42px; }
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+
+  .amed-report-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: 9mm 11mm 25mm;
+    overflow: hidden;
+    box-shadow: none !important;
+  }
+}

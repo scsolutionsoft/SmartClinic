@@ -1,0 +1,257 @@
+@model PatientInsightsViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "ค้นหาและวิเคราะห์ผู้ป่วย";
+    var months = new[] { "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม" };
+}
+
+<div class="pi-page">
+    <section class="pi-hero">
+        <div>
+            <span class="pi-eyebrow">PATIENT 360°</span>
+            <h1>ค้นหาและวิเคราะห์ผู้ป่วย</h1>
+            <p>ภาพรวมประวัติการรักษา การใช้บริการ และแนวโน้มสุขภาพในหน้าเดียว</p>
+        </div>
+        <div class="pi-shield" aria-hidden="true">✚</div>
+    </section>
+
+    <form method="get" class="pi-search-card">
+        <label for="patient-search">ค้นหาด้วยชื่อ เลขบัตรประชาชน หรือเบอร์โทรศัพท์</label>
+        <div class="pi-search-row">
+            <div class="pi-search-input"><span>⌕</span><input id="patient-search" name="search" value="@Model.Search" placeholder="เช่น สมชาย, 1103700..." autocomplete="off" /></div>
+            <button type="submit">ค้นหาผู้ป่วย</button>
+        </div>
+    </form>
+
+    @if (Model.Patients.Count > 0 && Model.Profile is null)
+    {
+        <section class="pi-results">
+            <div class="pi-section-title"><div><span>ผลการค้นหา</span><small>พบ @Model.Patients.Count รายการ</small></div></div>
+            <div class="pi-patient-grid">
+            @foreach (var patient in Model.Patients)
+            {
+                <a asp-action="Index" asp-route-search="@Model.Search" asp-route-patientId="@patient.Id" class="pi-patient-result">
+                    <div class="pi-avatar mini">
+                        @if (patient.HasPhoto) { <img src="/Patients/Photo/@patient.CitizenId" alt="" /> } else { <span class="pi-no-photo" role="img" aria-label="ไม่มีรูปผู้ป่วย"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h2l1.2-1.4h3.6L15 4h2a2.5 2.5 0 0 1 2.5 2.5v8.1M17.8 17.8A2.5 2.5 0 0 1 17 18H7a2.5 2.5 0 0 1-2.5-2.5v-9M9.2 9.2A4 4 0 0 0 14.8 14.8M3 3l18 18"/></svg></span> }
+                    </div>
+                    <div><strong>@patient.FullName</strong><small>@patient.CitizenId</small></div><span class="pi-arrow">›</span>
+                </a>
+            }
+            </div>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Search) && Model.Profile is null)
+    {
+        <div class="pi-empty"><span>⌕</span><h2>ไม่พบผู้ป่วย</h2><p>ลองตรวจสอบคำค้นหรือใช้เลขบัตรประชาชน 13 หลัก</p></div>
+    }
+
+    @if (Model.Profile is not null)
+    {
+        <section class="pi-profile">
+            <div class="pi-avatar">
+                @if (Model.Profile.HasPhoto) { <img src="/Patients/Photo/@Model.Profile.CitizenId" alt="@Model.Profile.FullName" /> } else { <span class="pi-no-photo" role="img" aria-label="ไม่มีรูปผู้ป่วย"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h2l1.2-1.4h3.6L15 4h2a2.5 2.5 0 0 1 2.5 2.5v8.1M17.8 17.8A2.5 2.5 0 0 1 17 18H7a2.5 2.5 0 0 1-2.5-2.5v-9M9.2 9.2A4 4 0 0 0 14.8 14.8M3 3l18 18"/></svg></span> }
+            </div>
+            <div class="pi-profile-main">
+                <div class="pi-profile-head"><div><span class="pi-online">ข้อมูลผู้ป่วย</span><h2>@Model.Profile.FullName</h2></div><a asp-controller="Patients" asp-action="Edit" asp-route-citizenId="@Model.Profile.CitizenId">แก้ไขข้อมูล</a></div>
+                <div class="pi-identity"><span>HN @Model.Profile.Id.ToString("D6")</span><span>บัตรประชาชน @Model.Profile.CitizenId</span><span>@Model.Profile.Gender · @Model.Profile.Age</span></div>
+                <div class="pi-contact"><span>☎ @Model.Profile.PhoneNumber</span><span>⌖ @Model.Profile.Address</span></div>
+            </div>
+            <div class="pi-health-tags">
+                <div><small>โรคประจำตัว</small><strong>@(string.IsNullOrWhiteSpace(Model.Profile.UnderlyingDisease) ? "ไม่พบข้อมูล" : Model.Profile.UnderlyingDisease)</strong></div>
+                <div><small>ประวัติแพ้ยา</small><strong class="@(!string.IsNullOrWhiteSpace(Model.Profile.AllergyHistory) ? "warn" : "")">@(string.IsNullOrWhiteSpace(Model.Profile.AllergyHistory) ? "ไม่พบข้อมูล" : Model.Profile.AllergyHistory)</strong></div>
+                <div><small>สิทธิการรักษา</small><strong>@(string.IsNullOrWhiteSpace(Model.Profile.MedicalBenefit) ? "ไม่ระบุ" : Model.Profile.MedicalBenefit)</strong></div>
+            </div>
+        </section>
+
+        <section class="pi-stats">
+            <article><span class="pi-stat-icon blue">↗</span><div><strong>@Model.TotalVisits</strong><small>เข้ารับบริการทั้งหมด</small></div></article>
+            <article><span class="pi-stat-icon green">◷</span><div><strong>@Model.VisitsThisYear</strong><small>ครั้งในปีนี้</small></div></article>
+            <article><span class="pi-stat-icon amber">↻</span><div><strong>@Model.FollowUpCount</strong><small>รายการติดตาม</small></div></article>
+            <article><span class="pi-stat-icon purple">✚</span><div><strong>@Model.WoundCareCount</strong><small>บริการทำแผล</small></div></article>
+        </section>
+
+        <section class="pi-panel pi-appointments">
+            <div class="pi-panel-head"><div><h2>นัดหมายผู้ป่วย</h2><p>กำหนดการติดตามจากเวชระเบียน OPD</p></div><span class="pi-appointment-count">@Model.Appointments.Count รายการ</span></div>
+            @if (Model.Appointments.Count > 0)
+            {
+                <div class="pi-appointment-list">
+                @foreach (var appointment in Model.Appointments)
+                {
+                    <article class="pi-appointment-card @appointment.StatusClass">
+                        <div class="pi-appointment-date"><span>@appointment.AppointmentDateTime.Day</span><small>@appointment.AppointmentDateTime.ToString("MMM", new System.Globalization.CultureInfo("th-TH"))</small></div>
+                        <div class="pi-appointment-info"><div><h3>@appointment.Diagnosis</h3><em class="@appointment.StatusClass">@appointment.Status</em></div><p>◷ @appointment.DateText เวลา @appointment.TimeText</p><small>@appointment.Note</small></div>
+                        <a href="@appointment.ReportUrl" target="_blank" title="เปิดรายงานการรักษา">ดูรายงาน ›</a>
+                    </article>
+                }
+                </div>
+            }
+            else
+            {
+                <div class="pi-empty compact"><span>◷</span><h3>ยังไม่มีนัดหมาย</h3><p>นัดหมายจะแสดงเมื่อเลือก “นัดตามที่คลินิก” ในเวชระเบียน OPD</p></div>
+            }
+        </section>
+
+        <section class="pi-panel pi-documents">
+            <div class="pi-panel-head">
+                <div><h2>รายงานเวชระเบียน</h2><p>เลือกดูรายงานในหน้าต่างป๊อปอัปได้ทันที</p></div>
+                <span class="pi-doc-count">@Model.Documents.Count เอกสาร</span>
+            </div>
+            @if (Model.Documents.Count > 0)
+            {
+                <div class="pi-document-grid">
+                @foreach (var document in Model.Documents)
+                {
+                    <button type="button" class="pi-document-card pi-document-preview" data-url="@document.Url" data-title="@document.Title">
+                        <span class="pi-document-icon @(document.Type == "PROFILE" ? "profile" : "opd")" aria-hidden="true">
+                            @if (document.Type == "PROFILE")
+                            {
+                                <svg viewBox="0 0 24 24"><path d="M8 3h8v3H8zM6 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M8 12h8M8 16h6M6 12h.01M6 16h.01"/></svg>
+                            }
+                            else
+                            {
+                                <svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5M4 7v13a1 1 0 0 0 1 1"/></svg>
+                            }
+                        </span>
+                        <span class="pi-document-info"><strong>@document.Title</strong><small>@document.Subtitle</small><em>@document.Date</em></span>
+                        <span class="pi-document-action">ดูรายงาน <b>›</b></span>
+                    </button>
+                }
+                </div>
+            }
+            else
+            {
+                <div class="pi-empty compact"><span>▤</span><h3>ยังไม่มีรายงานเวชระเบียน</h3><p>รายงานจะแสดงเมื่อบันทึกเวชระเบียนของผู้ป่วยแล้ว</p></div>
+            }
+        </section>
+
+        <div class="pi-dashboard-grid">
+            <section class="pi-panel pi-history">
+                <div class="pi-panel-head">
+                    <div><h2>ประวัติการเข้ารับบริการ</h2><p>เรียงจากรายการล่าสุด</p></div>
+                    <form method="get" class="pi-filters">
+                        <input type="hidden" name="patientId" value="@Model.PatientId" />
+                        <input type="hidden" name="search" value="@Model.Search" />
+                        <select name="month" aria-label="เดือน"><option value="">ทุกเดือน</option>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month == i)">@months[i-1]</option>}</select>
+                        <select name="year" aria-label="ปี"><option value="">ทุกปี</option>@foreach(var y in Model.AvailableYears){<option value="@y" selected="@(Model.Year == y)">@(y + 543)</option>}</select>
+                        <button type="submit">กรอง</button>
+                    </form>
+                </div>
+                @if (Model.Visits.Count == 0)
+                {
+                    <div class="pi-empty compact"><span>▦</span><h3>ไม่มีข้อมูลในช่วงเวลานี้</h3><p>ลองเปลี่ยนเดือนหรือปีที่ต้องการดู</p></div>
+                }
+                else
+                {
+                    <div class="pi-timeline">
+                    @foreach (var visit in Model.Visits)
+                    {
+                        <article class="pi-visit">
+                            <div class="pi-visit-icon @(visit.Type == "WOUND" ? "wound" : "")">@(visit.Type == "WOUND" ? "✚" : "▤")</div>
+                            <div class="pi-visit-body">
+                                <div class="pi-visit-top"><div><span>@visit.Date</span><h3>@visit.Title</h3></div><em>@visit.Status</em></div>
+                                <p>@visit.Detail</p>
+                                <div class="pi-visit-meta"><span>ผู้ให้บริการ: @visit.Provider</span><button type="button" class="pi-report-btn" data-visit='@JsonSerializer.Serialize(visit)'>ดูรายงาน <b>›</b></button></div>
+                            </div>
+                        </article>
+                    }
+                    </div>
+                }
+            </section>
+
+            <aside>
+                <section class="pi-panel pi-chart-panel">
+                    <div class="pi-panel-head"><div><h2>แนวโน้มสุขภาพ</h2><p>สัญญาณชีพจากการรับบริการล่าสุด</p></div><span class="pi-live">● ข้อมูลจริง</span></div>
+                    @if (Model.Vitals.Count > 0)
+                    {
+                        var latestVital = Model.Vitals.Last();
+                        <div class="pi-vital-latest">
+                            <div><small>BP ล่าสุด</small><strong>@(latestVital.Systolic.HasValue ? $"{latestVital.Systolic}/{latestVital.Diastolic}" : "-")</strong><em>mmHg</em></div>
+                            <div><small>ชีพจร</small><strong>@(latestVital.Pulse?.ToString() ?? "-")</strong><em>ครั้ง/นาที</em></div>
+                            <div><small>น้ำหนัก</small><strong>@(latestVital.Weight?.ToString("0.#") ?? "-")</strong><em>กก.</em></div>
+                            <div><small>BMI</small><strong>@(latestVital.Bmi?.ToString("0.00") ?? "-")</strong><em>กก./ม²</em></div>
+                        </div>
+                        <div class="pi-chart-wrap"><canvas id="healthChart" aria-label="กราฟแนวโน้มสุขภาพ"></canvas></div>
+                        <div class="pi-legend"><span><i class="sys"></i>ความดันตัวบน</span><span><i class="dia"></i>ความดันตัวล่าง</span><span><i class="pulse"></i>ชีพจร</span></div>
+                        @if (Model.Vitals.Any(x => x.Weight.HasValue || x.Bmi.HasValue))
+                        {
+                            <h3 class="pi-subchart-title">แนวโน้มน้ำหนักและ BMI</h3><div class="pi-chart-wrap compact"><canvas id="bodyChart" aria-label="กราฟน้ำหนักและ BMI"></canvas></div>
+                            <div class="pi-legend"><span><i class="weight"></i>น้ำหนัก</span><span><i class="bmi"></i>BMI</span></div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pi-empty compact"><span>⌁</span><h3>ยังไม่มีข้อมูลสัญญาณชีพ</h3><p>กราฟจะแสดงเมื่อมีการบันทึกค่าจากการรับบริการ</p></div>
+                    }
+                </section>
+                <section class="pi-panel pi-care">
+                    <span class="pi-care-icon">♡</span><div><h3>ภาพรวมการดูแล</h3><p>@(Model.FollowUpCount > 0 ? $"มี {Model.FollowUpCount} รายการที่ควรติดตามต่อเนื่อง" : "ยังไม่มีรายการที่ต้องติดตาม")</p></div>
+                    <a asp-controller="MedicalRecords" asp-action="Index" asp-route-patientId="@Model.Profile.Id">เพิ่มการรักษา</a>
+                </section>
+            </aside>
+        </div>
+    }
+    else if (string.IsNullOrWhiteSpace(Model.Search))
+    {
+        <div class="pi-welcome"><div class="pi-welcome-art">⌕<i>+</i></div><h2>เริ่มต้นด้วยการค้นหาผู้ป่วย</h2><p>ดูประวัติการรักษา สรุปการใช้บริการ และแนวโน้มสุขภาพได้อย่างรวดเร็ว</p></div>
+    }
+</div>
+
+<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content pi-modal pi-preview-modal">
+        <div class="modal-header"><div><span class="pi-eyebrow">MEDICAL RECORD</span><h2 class="modal-title" id="documentPreviewTitle">รายงานเวชระเบียน</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><div class="pi-preview-loading" id="previewLoading"><span></span>กำลังโหลดรายงาน...</div><iframe id="documentPreviewFrame" title="พรีวิวรายงานเวชระเบียน"></iframe></div>
+        <div class="modal-footer"><button class="btn btn-light" data-bs-dismiss="modal">ปิด</button><a id="documentOpenLink" class="btn pi-primary-btn" target="_blank">เปิดรายงานในหน้าใหม่</a></div>
+    </div></div>
+</div>
+
+<div class="modal fade" id="visitReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content pi-modal">
+        <div class="modal-header"><div><span class="pi-eyebrow">VISIT REPORT</span><h2 class="modal-title" id="reportTitle">รายงานการรักษา</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="pi-modal-date" id="reportDate"></div>
+            <div class="pi-report-grid"><div><small>อาการสำคัญ / รายละเอียด</small><p id="reportDetail"></p></div><div><small>การรักษาและคำแนะนำ</small><p id="reportTreatment"></p></div><div><small>ผู้ให้บริการ</small><p id="reportProvider"></p></div><div><small>สถานะ</small><p id="reportStatus"></p></div></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-light" data-bs-dismiss="modal">ปิด</button><a id="fullReportLink" class="btn pi-primary-btn" target="_blank">เปิดรายงานฉบับเต็ม</a></div>
+    </div></div>
+</div>
+
+@section Scripts {
+<script>
+document.querySelectorAll('.pi-document-preview').forEach(btn => btn.addEventListener('click', () => {
+    const frame = document.getElementById('documentPreviewFrame'), loading = document.getElementById('previewLoading');
+    document.getElementById('documentPreviewTitle').textContent = btn.dataset.title;
+    document.getElementById('documentOpenLink').href = btn.dataset.url;
+    loading.hidden = false; frame.classList.remove('loaded'); frame.src = btn.dataset.url;
+    frame.onload = () => { loading.hidden = true; frame.classList.add('loaded'); };
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('documentPreviewModal')).show();
+}));
+document.getElementById('documentPreviewModal')?.addEventListener('hidden.bs.modal', () => {
+    document.getElementById('documentPreviewFrame').src = 'about:blank';
+});
+document.querySelectorAll('.pi-report-btn').forEach(btn => btn.addEventListener('click', () => {
+    const v = JSON.parse(btn.dataset.visit);
+    document.getElementById('reportTitle').textContent = v.Title;
+    document.getElementById('reportDate').textContent = v.Date;
+    document.getElementById('reportDetail').textContent = v.Detail;
+    document.getElementById('reportTreatment').textContent = v.Treatment;
+    document.getElementById('reportProvider').textContent = v.Provider;
+    document.getElementById('reportStatus').textContent = v.Status;
+    const link = document.getElementById('fullReportLink'); link.href = v.ReportUrl; link.hidden = !v.ReportUrl;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('visitReportModal')).show();
+}));
+const vitalData = @Html.Raw(JsonSerializer.Serialize(Model.Vitals));
+const canvas = document.getElementById('healthChart');
+if (canvas && vitalData.length) {
+    const ratio = window.devicePixelRatio || 1, box = canvas.parentElement.getBoundingClientRect();
+    canvas.width = box.width * ratio; canvas.height = 250 * ratio; canvas.style.height = '250px';
+    const c = canvas.getContext('2d'); c.scale(ratio, ratio); const w=box.width,h=250,p={l:35,r:12,t:18,b:32}, max=200;
+    c.font='11px system-ui'; c.fillStyle='#8a9aaa'; c.strokeStyle='#e8eef3'; c.lineWidth=1;
+    [0,50,100,150,200].forEach(n=>{const y=p.t+(max-n)/max*(h-p.t-p.b);c.beginPath();c.moveTo(p.l,y);c.lineTo(w-p.r,y);c.stroke();c.fillText(n,5,y+4)});
+    const draw=(key,color)=>{c.beginPath(); vitalData.forEach((v,i)=>{if(v[key]==null)return;const x=p.l+i*Math.max(1,(w-p.l-p.r)/Math.max(1,vitalData.length-1)),y=p.t+(max-v[key])/max*(h-p.t-p.b);i===0?c.moveTo(x,y):c.lineTo(x,y)});c.strokeStyle=color;c.lineWidth=2.5;c.lineJoin='round';c.stroke();vitalData.forEach((v,i)=>{if(v[key]==null)return;const x=p.l+i*Math.max(1,(w-p.l-p.r)/Math.max(1,vitalData.length-1)),y=p.t+(max-v[key])/max*(h-p.t-p.b);c.beginPath();c.arc(x,y,3,0,Math.PI*2);c.fillStyle=color;c.fill()})};
+    draw('Systolic','#2878e3'); draw('Diastolic','#23a88a'); draw('Pulse','#ec8b43');
+    c.fillStyle='#8a9aaa'; vitalData.forEach((v,i)=>{const x=p.l+i*Math.max(1,(w-p.l-p.r)/Math.max(1,vitalData.length-1));c.fillText(v.Date,x-13,h-9)});
+}
+const bodyCanvas=document.getElementById('bodyChart');
+if(bodyCanvas){const ratio=window.devicePixelRatio||1,box=bodyCanvas.parentElement.getBoundingClientRect(),w=box.width,h=180,p={l:35,r:12,t:15,b:30},values=vitalData.flatMap(v=>[v.Weight,v.Bmi]).filter(v=>v!=null),max=Math.max(50,...values)*1.15;bodyCanvas.width=w*ratio;bodyCanvas.height=h*ratio;bodyCanvas.style.height=h+'px';const c=bodyCanvas.getContext('2d');c.scale(ratio,ratio);c.font='11px system-ui';c.fillStyle='#8a9aaa';c.strokeStyle='#e8eef3';[0,.25,.5,.75,1].forEach(f=>{const y=p.t+(1-f)*(h-p.t-p.b);c.beginPath();c.moveTo(p.l,y);c.lineTo(w-p.r,y);c.stroke();c.fillText(Math.round(max*f),4,y+4)});const draw=(key,color)=>{let started=false;c.beginPath();vitalData.forEach((v,i)=>{if(v[key]==null)return;const x=p.l+i*Math.max(1,(w-p.l-p.r)/Math.max(1,vitalData.length-1)),y=p.t+(max-v[key])/max*(h-p.t-p.b);started?c.lineTo(x,y):c.moveTo(x,y);started=true});c.strokeStyle=color;c.lineWidth=2.5;c.stroke()};draw('Weight','#7656cf');draw('Bmi','#ec8b43');c.fillStyle='#8a9aaa';vitalData.forEach((v,i)=>{const x=p.l+i*Math.max(1,(w-p.l-p.r)/Math.max(1,vitalData.length-1));c.fillText(v.Date,x-13,h-8)})}
+</script>
+}

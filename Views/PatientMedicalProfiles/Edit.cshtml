@@ -26,7 +26,7 @@
                     @Html.AntiForgeryToken()
                     <input asp-for="Id" type="hidden" />
                     <input asp-for="CurrentPdfFileName" type="hidden" />
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div asp-validation-summary="All" class="alert alert-danger profile-validation-summary mb-3"></div>
 
                     <section class="opd-form-section">
                         <div class="opd-form-section-header">
@@ -156,9 +156,10 @@
                         <p>ไฟล์ปัจจุบัน: @(string.IsNullOrWhiteSpace(Model.CurrentPdfFileName) ? "ไม่มีไฟล์แนบ" : Model.CurrentPdfFileName)</p>
                             </div>
                         </div>
-                        <input asp-for="SourcePdfFile" type="file" accept="application/pdf" class="form-control" />
-                        <div class="form-text">ไม่บังคับ เลือกไฟล์เฉพาะกรณีต้องการเพิ่มหรือเปลี่ยน PDF ต้นฉบับ</div>
-                        <span asp-validation-for="SourcePdfFile" class="text-danger"></span>
+                        <div class="profile-pdf-status @(Model.HasPdfFile ? "has-file" : "")" id="profilePdfStatus">
+                            <span class="profile-pdf-icon">PDF</span><div><strong id="profilePdfFileName">@(string.IsNullOrWhiteSpace(Model.CurrentPdfFileName) ? "ยังไม่มีไฟล์ PDF ต้นฉบับ" : Model.CurrentPdfFileName)</strong><small id="profilePdfHint">@(Model.HasPdfFile ? "ไฟล์ถูกจัดเก็บในระบบแล้ว" : "สามารถเพิ่มไฟล์ภายหลังได้")</small></div>
+                            <div class="d-flex gap-2"><button type="button" id="profileInlinePreview" class="btn btn-outline-secondary btn-sm" data-preview-pdf-url="@Url.Action("Preview", "PatientMedicalProfiles", new { id = Model.Id })" hidden="@(!Model.HasPdfFile)">พรีวิว</button><button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#profilePdfUploadModal">@(Model.HasPdfFile ? "เปลี่ยนไฟล์" : "เพิ่มไฟล์ PDF")</button></div>
+                        </div>
                     </section>
 
                     <div class="opd-sticky-actions">
@@ -169,6 +170,19 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="modal fade" id="profilePdfUploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content profile-upload-modal">
+        <div class="modal-header"><div><span class="profile-upload-icon">PDF</span><div><h2 class="modal-title">อัปโหลด PDF ต้นฉบับ</h2><p>เพิ่มหรือเปลี่ยนไฟล์โดยไม่กระทบข้อมูลเวชระเบียน</p></div></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <label class="profile-upload-drop" id="profileUploadDrop"><input type="file" id="profilePdfUploadInput" accept="application/pdf,.pdf" /><span>⇧</span><strong>เลือกไฟล์ PDF</strong><small>หรือลากไฟล์มาวาง · ขนาดไม่เกิน 20 MB</small></label>
+            <div class="profile-upload-selected" id="profileUploadSelected" hidden><span>PDF</span><div><strong id="profileUploadName"></strong><small id="profileUploadSize"></small></div><button type="button" id="profileUploadClear">×</button></div>
+            <div class="alert alert-danger mt-3 mb-0" id="profileUploadError" hidden></div>
+            <div class="profile-upload-progress mt-3" id="profileUploadProgress" hidden><span></span><small>กำลังอัปโหลดและบันทึกไฟล์...</small></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button><button type="button" class="btn btn-primary" id="profileUploadSubmit" disabled>อัปโหลดไฟล์</button></div>
+    </div></div>
 </div>
 
 <div class="modal fade" id="profilePdfPreviewModal" tabindex="-1" aria-hidden="true">
@@ -195,5 +209,12 @@
             if (frame) frame.src = trigger.getAttribute('data-preview-pdf-url');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('profilePdfPreviewModal')).show();
         });
+
+        const uploadInput=document.getElementById('profilePdfUploadInput'),drop=document.getElementById('profileUploadDrop'),selected=document.getElementById('profileUploadSelected'),uploadName=document.getElementById('profileUploadName'),uploadSize=document.getElementById('profileUploadSize'),clearButton=document.getElementById('profileUploadClear'),submitButton=document.getElementById('profileUploadSubmit'),errorBox=document.getElementById('profileUploadError'),progress=document.getElementById('profileUploadProgress');
+        let selectedPdf=null;
+        function setUploadFile(file){errorBox.hidden=true;if(!file){selectedPdf=null;selected.hidden=true;submitButton.disabled=true;uploadInput.value='';return}if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){errorBox.textContent='กรุณาเลือกไฟล์ PDF เท่านั้น';errorBox.hidden=false;return}if(file.size>20*1024*1024){errorBox.textContent='ไฟล์ PDF ต้องมีขนาดไม่เกิน 20 MB';errorBox.hidden=false;return}selectedPdf=file;uploadName.textContent=file.name;uploadSize.textContent=(file.size/1024/1024).toFixed(2)+' MB';selected.hidden=false;submitButton.disabled=false}
+        uploadInput?.addEventListener('change',()=>setUploadFile(uploadInput.files?.[0]));clearButton?.addEventListener('click',()=>setUploadFile(null));
+        ['dragenter','dragover'].forEach(name=>drop?.addEventListener(name,event=>{event.preventDefault();drop.classList.add('dragging')}));['dragleave','drop'].forEach(name=>drop?.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('dragging')}));drop?.addEventListener('drop',event=>setUploadFile(event.dataTransfer.files?.[0]));
+        submitButton?.addEventListener('click',async()=>{if(!selectedPdf)return;const token=document.querySelector('input[name="__RequestVerificationToken"]')?.value,form=new FormData();form.append('id','@Model.Id');form.append('sourcePdfFile',selectedPdf);submitButton.disabled=true;progress.hidden=false;errorBox.hidden=true;try{const response=await fetch('@Url.Action("UploadPdf", "PatientMedicalProfiles")',{method:'POST',headers:token?{'RequestVerificationToken':token}:{},body:form});const payload=await response.json();if(!response.ok||!payload.success)throw new Error(payload.error||'อัปโหลดไม่สำเร็จ');document.getElementById('profilePdfFileName').textContent=payload.fileName;document.getElementById('profilePdfHint').textContent='อัปโหลดและบันทึกไฟล์เรียบร้อยแล้ว';document.getElementById('profilePdfStatus').classList.add('has-file');const preview=document.getElementById('profileInlinePreview');preview.dataset.previewPdfUrl=payload.previewUrl;preview.hidden=false;bootstrap.Modal.getInstance(document.getElementById('profilePdfUploadModal'))?.hide();setUploadFile(null)}catch(error){errorBox.textContent=error.message;errorBox.hidden=false}finally{progress.hidden=true;submitButton.disabled=!selectedPdf}});
     </script>
 }

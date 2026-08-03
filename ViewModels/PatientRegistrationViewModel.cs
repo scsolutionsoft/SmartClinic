@@ -58,11 +58,31 @@ public class PatientSummaryViewModel
 
 public class PatientDashboardViewModel
 {
+    public const int PageSize = 20;
+
     public PatientRegistrationViewModel Input { get; set; } = new();
 
     public IReadOnlyList<PatientSummaryViewModel> RecentPatients { get; set; } = Array.Empty<PatientSummaryViewModel>();
 
+    public int CurrentPage { get; set; } = 1;
+
+    public int TotalItems { get; set; }
+
+    public int TotalPages { get; set; }
+
+    public string SearchTerm { get; set; } = string.Empty;
+
     public string? StatusMessage { get; set; }
+
+    public int PatientLimit { get; set; }
+
+    public bool IsUnlimited { get; set; }
+
+    public int RemainingPatients => IsUnlimited ? int.MaxValue : Math.Max(0, PatientLimit - TotalItems);
+
+    public string ContactName { get; set; } = string.Empty;
+
+    public string ContactPhone { get; set; } = string.Empty;
 }
 
 public class PatientEditViewModel

@@ -204,32 +204,59 @@
                     <span class="badge text-bg-light">@Model.Profiles.Count รายการ</span>
                 </div>
 
-                <div class="list-group list-group-flush">
+                <form asp-action="Index" method="get" class="mb-3">
+                    <label for="medical-profile-search" class="visually-hidden">ค้นหาชื่อ-นามสกุล หรือเลขบัตรประจำตัวประชาชน</label>
+                    <div class="input-group">
+                        <input id="medical-profile-search"
+                               name="search"
+                               value="@Model.SearchTerm"
+                               class="form-control"
+                               placeholder="ค้นหาชื่อ-นามสกุล หรือเลขบัตรประชาชน"
+                               autocomplete="off" />
+                        <button type="submit" class="btn btn-primary">ค้นหา</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                        {
+                            <a asp-action="Index" class="btn btn-outline-secondary">ล้าง</a>
+                        }
+                    </div>
+                </form>
+
+                <div class="list-group list-group-flush opd-recent-list">
+                    @{ var recentIndex = 1; }
                     @foreach (var item in Model.Profiles)
                     {
-                        <div class="list-group-item px-0 py-3">
-                            <div class="fw-semibold">@item.PatientName</div>
-                            <div class="small text-body-secondary">@item.CitizenId • @item.InformationGivenDateText</div>
-                            <div class="small text-body-secondary">เลขผู้รับบริการ: @(string.IsNullOrWhiteSpace(item.ServiceRecipientId) ? "-" : item.ServiceRecipientId)</div>
-                            <div class="small text-body-secondary text-truncate">@item.MedicalBenefit</div>
-                            <div class="d-flex gap-2 mt-2 flex-wrap">
-                                @if (item.HasPdfFile)
-                                {
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-pdf-url="@Url.Action("Preview", "PatientMedicalProfiles", new { id = item.Id })">พรีวิวต้นฉบับ</button>
-                                }
-                                <a class="btn btn-outline-secondary btn-sm" asp-action="Edit" asp-route-id="@item.Id">แก้ไข</a>
-                                <a class="btn btn-outline-primary btn-sm" asp-action="Report" asp-route-id="@item.Id">รายงาน/พิมพ์</a>
-                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('ยืนยันลบเวชระเบียนผู้รับบริการของ @item.PatientName ?')">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">ลบ</button>
-                                </form>
+                        <div class="list-group-item px-0 py-3 opd-recent-item">
+                            <div class="d-flex align-items-start gap-3">
+                                <span class="opd-recent-rank">@recentIndex</span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">@item.PatientName</div>
+                                    <div class="small text-body-secondary">@item.CitizenId • @item.InformationGivenDateText</div>
+                                    <div class="small text-body-secondary">เลขผู้รับบริการ: @(string.IsNullOrWhiteSpace(item.ServiceRecipientId) ? "-" : item.ServiceRecipientId)</div>
+                                    <div class="small text-body-secondary text-truncate">@item.MedicalBenefit</div>
+                                    <div class="d-flex gap-2 mt-2 flex-wrap">
+                                        @if (item.HasPdfFile)
+                                        {
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-pdf-url="@Url.Action("Preview", "PatientMedicalProfiles", new { id = item.Id })">พรีวิวต้นฉบับ</button>
+                                        }
+                                        <a class="btn btn-outline-secondary btn-sm" asp-action="Edit" asp-route-id="@item.Id">แก้ไข</a>
+                                        <a class="btn btn-outline-primary btn-sm" asp-action="Report" asp-route-id="@item.Id">รายงาน/พิมพ์</a>
+                                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('ยืนยันลบเวชระเบียนผู้รับบริการของ @item.PatientName ?')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">ลบ</button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        recentIndex++;
                     }
 
                     @if (!Model.Profiles.Any())
                     {
-                        <div class="text-center text-body-secondary py-5">ยังไม่มีเวชระเบียนผู้รับบริการ</div>
+                        <div class="text-center text-body-secondary py-5">
+                            @(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "ยังไม่มีเวชระเบียนผู้รับบริการ" : "ไม่พบข้อมูลผู้ป่วยที่ค้นหา")
+                        </div>
                     }
                 </div>
             </div>
@@ -270,6 +297,21 @@
                 if (element) element.value = value || '';
             };
 
+            const getValue = id => document.getElementById(id)?.value?.trim() || '';
+
+            const setValueIfEmpty = (id, value) => {
+                if (!getValue(id) && value) setValue(id, value);
+            };
+
+            const digitsOnly = value => (value || '').replace(/\D/g, '');
+
+            function applyProfileDefaults() {
+                setValueIfEmpty('profileGender', 'ไม่ระบุ');
+                setValueIfEmpty('profilePastHistory', 'ปฏิเสธ');
+                setValueIfEmpty('profileFamilyHistory', 'ปฏิเสธ');
+                setValueIfEmpty('profileAllergyHistory', 'ปฏิเสธ');
+            }
+
             function setDuplicateState(patient) {
                 const hasProfile = patient?.hasProfile === true;
                 if (submitButton) submitButton.disabled = hasProfile;
@@ -294,7 +336,7 @@
                 selectedText.textContent = `เลือกผู้ป่วยแล้ว: ${patient.fullName} (${patient.citizenId})`;
             }
 
-            function fillFormFromPatient(patient) {
+            function fillFormFromPatient(patient, preserveImportedValues = false) {
                 const profile = patient.profile || null;
                 setValue('profilePatientId', patient.id);
                 setValue('profilePatientSearch', `${patient.fullName} (${patient.citizenId})`);
@@ -321,22 +363,21 @@
                     setValue('profileEmergencyContactPhone', profile.emergencyContactPhone);
                     setValue('profileInformationGivenDate', profile.informationGivenDate);
                 } else {
-                    setValue('profileServiceRecipientId', patient.serviceRecipientId || document.getElementById('profileServiceRecipientId')?.value);
-                    setValue('profilePatientName', patient.fullName);
-                    setValue('profileGender', patient.gender || 'ไม่ระบุ');
-                    setValue('profileBirthDate', patient.birthDate);
-                    setValue('profileRegisteredAddress', patient.address);
-                    setValue('profileContactAddress', patient.address);
-                    setValue('profilePhoneNumber', patient.phoneNumber);
-                    setValue('profilePastHistory', document.getElementById('profilePastHistory')?.value || 'ปฏิเสธ');
-                    setValue('profileFamilyHistory', document.getElementById('profileFamilyHistory')?.value || 'ปฏิเสธ');
-                    setValue('profileAllergyHistory', document.getElementById('profileAllergyHistory')?.value || 'ปฏิเสธ');
+                    const assign = preserveImportedValues ? setValueIfEmpty : setValue;
+                    assign('profileServiceRecipientId', patient.serviceRecipientId);
+                    assign('profilePatientName', patient.fullName);
+                    assign('profileGender', patient.gender || 'ไม่ระบุ');
+                    assign('profileBirthDate', patient.birthDate);
+                    assign('profileRegisteredAddress', patient.address);
+                    assign('profileContactAddress', patient.address);
+                    assign('profilePhoneNumber', patient.phoneNumber);
                 }
 
+                applyProfileDefaults();
                 setDuplicateState(patient);
             }
 
-            async function searchPatient(query, autoSelectExact = false) {
+            async function searchPatient(query, autoSelectExact = false, preserveImportedValues = false) {
                 if (!query || query.trim().length < 2) {
                     searchResults.style.display = 'none';
                     searchResults.innerHTML = '';
@@ -347,13 +388,15 @@
                 const patients = await response.json();
                 searchResults.innerHTML = '';
 
+                const normalizedQuery = query.trim();
+                const queryCitizenId = digitsOnly(normalizedQuery);
                 const exactPatient = patients.find(patient =>
-                    patient.citizenId === query.trim() ||
-                    (patient.fullName || '').trim() === query.trim());
+                    (queryCitizenId.length === 13 && digitsOnly(patient.citizenId) === queryCitizenId) ||
+                    (patient.fullName || '').trim().localeCompare(normalizedQuery, 'th', { sensitivity: 'base' }) === 0);
                 if (autoSelectExact && exactPatient) {
-                    fillFormFromPatient(exactPatient);
+                    fillFormFromPatient(exactPatient, preserveImportedValues);
                     searchResults.style.display = 'none';
-                    return;
+                    return exactPatient;
                 }
 
                 patients.forEach(patient => {
@@ -372,6 +415,7 @@
                     searchResults.appendChild(button);
                 });
                 searchResults.style.display = patients.length ? '' : 'none';
+                return null;
             }
 
             searchBox?.addEventListener('input', function () {
@@ -457,8 +501,10 @@
                     setValue('profileInformationGivenDate', data.informationGivenDate);
                     setValue('profilePatientSearch', data.patientName || data.citizenId);
 
+                    applyProfileDefaults();
+
                     if (data.patientName || data.citizenId) {
-                        await searchPatient(data.citizenId || data.patientName, true);
+                        await searchPatient(data.citizenId || data.patientName, true, true);
                     }
 
                     smartClinicStatusModal.show({

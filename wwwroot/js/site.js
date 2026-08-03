@@ -67,6 +67,14 @@
 	};
 })();
 
+// Backdrops are appended to <body>. Keep page modals there too so a
+// transition-created stacking context cannot place the backdrop above them.
+document.addEventListener('DOMContentLoaded', function () {
+	document.querySelectorAll('main .modal').forEach(function (modalElement) {
+		document.body.appendChild(modalElement);
+	});
+});
+
 document.addEventListener('click', function (event) {
 	const trigger = event.target.closest('[data-status-modal]');
 	if (!trigger) {
@@ -164,6 +172,13 @@ function updateReaderConnectionStatus(payload) {
 		return;
 	}
 
+	if (payload.bridgeReachable === true) {
+		setDot('connected');
+		badge.textContent = 'Bridge พร้อม';
+		if (detail) detail.textContent = payload.statusText || 'พร้อมอ่านบัตรผ่าน WebSocket';
+		return;
+	}
+
 	if (!hasReader) {
 		setDot('disconnected');
 		badge.textContent = 'ไม่พบเครื่องอ่าน';
@@ -188,10 +203,43 @@ function updateReaderConnectionStatus(payload) {
 	}
 }
 
+async function getLocalBridgeStatus() {
+	const response = await fetch('http://localhost:9999/status', {
+		cache: 'no-store',
+		targetAddressSpace: 'local'
+	});
+	const payload = await response.json();
+	if (!response.ok || !payload.success) {
+		throw new Error(payload.error || payload.statusText || `HTTP ${response.status}`);
+	}
+	return payload;
+}
+
+async function createLocalSmartCardSocket() {
+	// Chromium 142+ requires Local Network Access permission when a public
+	// HTTPS site connects to a service on localhost. Calling the status
+	// endpoint from the user's click triggers the browser permission prompt.
+	const isLocalDevelopment = location.hostname === 'localhost'
+		|| location.hostname === '127.0.0.1';
+
+	if (!window.isSecureContext && !isLocalDevelopment) {
+		throw new Error('การเชื่อมต่อ Bridge ต้องใช้เว็บไซต์ HTTPS ที่มีใบรับรองถูกต้อง กรุณาแก้ Certificate ของเว็บไซต์ก่อน');
+	}
+
+	if (!isLocalDevelopment) {
+		try {
+			await getLocalBridgeStatus();
+		} catch (error) {
+			throw new Error('Edge/Chrome ติดต่อ Bridge ไม่ได้ กรุณาอนุญาต Local network access ให้เว็บไซต์ ตรวจว่า Bridge เปิดอยู่ แล้วลองอีกครั้ง');
+		}
+	}
+
+	return new WebSocket('ws://localhost:9999/card');
+}
+
 async function fetchReaderStatus() {
 	try {
-		const response = await fetch('/api/smartcard/reader-status');
-		const payload = await response.json();
+		const payload = await getLocalBridgeStatus();
 		updateReaderConnectionStatus(payload);
 	} catch (error) {
 		updateReaderConnectionStatus({
@@ -478,7 +526,7 @@ document.addEventListener('click', async function (event) {
 	});
 
 	try {
-		const ws = new WebSocket('ws://localhost:9999/card');
+		const ws = await createLocalSmartCardSocket();
 		session.webSocket = ws;
 
 		const finalize = function () {
@@ -591,7 +639,7 @@ document.addEventListener('click', async function (event) {
 	});
 
 	try {
-		const ws = new WebSocket('ws://localhost:9999/card');
+		const ws = await createLocalSmartCardSocket();
 		session.webSocket = ws;
 
 		const finalize = function () {
@@ -679,17 +727,7 @@ async function restartSmartCardBridgeSession() {
 		session.webSocket.close(1000, 'User cancelled');
 	}
 
-	const response = await fetch('/api/smartcard/restart-bridge', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		}
-	});
-	const payload = await response.json();
-
-	if (!response.ok || !payload.success) {
-		throw new Error(payload.error || payload.message || `HTTP ${response.status}`);
-	}
+	const payload = await getLocalBridgeStatus();
 
 	session.inProgress = false;
 	session.webSocket = null;
@@ -706,14 +744,14 @@ document.addEventListener('click', async function (event) {
 
 	try {
 		const payload = await restartSmartCardBridgeSession();
-		updateSmartCardPreview(null, 'รีสตาร์ท Bridge แล้ว พร้อมอ่านบัตรใหม่');
+		updateSmartCardPreview(null, 'Bridge บนเครื่องนี้พร้อมอ่านบัตร');
 		fetchReaderStatus();
 		smartClinicStatusModal.show({
 			type: 'success',
 			subtitle: 'Smart card bridge',
-			state: 'Restarted',
-			stateDescription: 'ตัดการเชื่อมต่อและรีสตาร์ทสำเร็จ',
-			message: payload.message || 'Bridge พร้อมใช้งานแล้ว',
+			state: 'Ready',
+			stateDescription: 'Bridge บนเครื่องนี้พร้อมใช้งาน',
+			message: payload.statusText || 'Bridge พร้อมใช้งานแล้ว',
 			meta: `Port: ${payload.port || 9999}`,
 			actionText: 'ตกลง'
 		});
@@ -721,10 +759,10 @@ document.addEventListener('click', async function (event) {
 		smartClinicStatusModal.show({
 			type: 'danger',
 			subtitle: 'Smart card bridge',
-			state: 'Restart failed',
-			stateDescription: 'รีสตาร์ทพอร์ตไม่สำเร็จ',
-			message: `ไม่สามารถรีสตาร์ทพอร์ตได้: ${restartError.message}`,
-			meta: 'ตรวจสอบสิทธิ์การรันแอปและการติดตั้ง Bridge ที่ C:/Program Files/SmartClinic/CardReader',
+			state: 'Unavailable',
+			stateDescription: 'เชื่อมต่อ Bridge บนเครื่องนี้ไม่สำเร็จ',
+			message: `ไม่สามารถเชื่อมต่อ Bridge ได้: ${restartError.message}`,
+			meta: 'เปิด C:/Program Files/SmartClinic/CardReader/start-bridge.bat บนเครื่องที่เสียบเครื่องอ่านบัตร',
 			actionText: 'ปิด'
 		});
 	}
@@ -891,7 +929,7 @@ document.addEventListener('click', async function (event) {
 	});
 
 	try {
-		const ws = new WebSocket('ws://localhost:9999/card');
+		const ws = await createLocalSmartCardSocket();
 		session.webSocket = ws;
 
 		const finalize = function () {

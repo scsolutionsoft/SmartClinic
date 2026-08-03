@@ -5,6 +5,8 @@ public class ReportFilterViewModel
     public DateTime DateFrom { get; set; } = DateTime.Today.AddDays(-30);
 
     public DateTime DateTo { get; set; } = DateTime.Today;
+
+    public string SearchTerm { get; set; } = string.Empty;
 }
 
 public class ReportItemViewModel

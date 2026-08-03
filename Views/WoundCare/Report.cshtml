@@ -1,0 +1,17 @@
+@model SmartClinic.Web.Models.WoundCareRecord
+@{ ViewData["Title"]="รายงานการทำแผล"; Layout="_Layout"; }
+<div class="d-print-none mb-3"><button onclick="window.print()" class="btn btn-primary">พิมพ์รายงาน</button> <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a></div>
+<article class="wound-report bg-white mx-auto p-4">
+<header class="text-center mb-3"><h2>การทำแผล</h2><div><strong>เลขประจำตัวผู้รับบริการ</strong> @Model.ServiceRecipientId</div></header>
+<div class="row"><div class="col-8"><strong>ชื่อ-สกุล</strong> @Model.Patient.FullName</div><div class="col-4"><strong>เลขบัตร</strong> @Model.CitizenId</div></div>
+<div><strong>วันที่รับบริการ</strong> @Model.VisitDate.ToString("dd/MM/yyyy HH:mm") &nbsp; <strong>Authentication Code</strong> @Model.AuthenticationCode</div>
+<hr/>
+<p><strong>สาเหตุของแผล:</strong> @Model.WoundCause</p><p><strong>ตำแหน่งของแผล:</strong> @Model.WoundLocation</p>
+<p><strong>ลักษณะแผล:</strong> @(Model.IsBruiseOrSutured?"☑ แผลฟกช้ำ/แผลเย็บ ":"☐ แผลฟกช้ำ/แผลเย็บ ") @(Model.IsOpenInfected?"☑ แผลเปิดติดเชื้อ ":"☐ แผลเปิดติดเชื้อ ") @(Model.IsLargeOpenWound?"☑ แผลเปิดขนาดใหญ่":"☐ แผลเปิดขนาดใหญ่")</p>
+<p><strong>ขนาดแผล:</strong> @Model.WoundSize &nbsp; <strong>ทำแผลครั้งที่:</strong> @Model.DressingSequence &nbsp; <strong>ความก้าวหน้า:</strong> @Model.WoundProgress @Model.WoundProgressNote</p>
+<p><strong>สัญญาณชีพ:</strong> อุณหภูมิ @Model.TemperatureCelsius °C ชีพจร @Model.PulseRate ครั้ง/นาที หายใจ @Model.RespiratoryRate ครั้ง/นาที ความดัน @Model.SystolicPressure/@Model.DiastolicPressure มม.ปรอท</p>
+<p><strong>ผลหลังทำแผล:</strong> @Model.PostDressingResult</p><p><strong>การติดตาม:</strong> @(Model.FollowUpNone?"☑ ไม่นัด ":"") @(Model.FollowUpPhone?"☑ โทรศัพท์ ":"") @(Model.FollowUpClinic?"☑ นัดคลินิก ":"") @(Model.FollowUpOther?"☑ อื่นๆ ":"") @Model.FollowUpNote</p>
+<section class="border p-3"><h5>การประเมินลักษณะแผล</h5><p>@Model.WoundAssessment</p><h5>ความรู้และคำแนะนำสำหรับผู้รับบริการ</h5><p style="white-space:pre-line">@Model.PatientAdvice</p></section>
+@if(Model.Photos.Any()){<h5 class="mt-3">รูปแผลประกอบรายงาน</h5><div class="row g-2">@foreach(var p in Model.Photos.OrderBy(x=>x.SequenceNo)){<div class="col-6"><img src="@Url.Action("Photo",new{id=p.Id})" class="img-fluid wound-report-photo" alt="รูปแผล @p.SequenceNo"/><div class="text-center small">รูปที่ @p.SequenceNo</div></div>}</div>}
+<div class="text-end mt-4">ผู้ให้บริการ @Model.ProviderName<br/>@Model.ProviderTitle</div>
+</article>

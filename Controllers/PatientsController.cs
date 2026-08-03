@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SmartClinic.Web.Data;
 using SmartClinic.Web.Models;
@@ -23,15 +24,32 @@ public class PatientsController : Controller
         this.userManager = userManager;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, int page = 1)
     {
         var currentUser = await userManager.GetUserAsync(User);
         var clinicCode = currentUser?.ClinicCode ?? "SMARTCLINIC";
+        var normalizedSearch = search?.Trim();
 
-        var recentPatients = await dbContext.Patients
-            .Where(patient => patient.ClinicCode == clinicCode)
+        var patientsQuery = dbContext.Patients
+            .AsNoTracking()
+            .Where(patient => patient.ClinicCode == clinicCode);
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            patientsQuery = patientsQuery.Where(patient =>
+                patient.FullName.Contains(normalizedSearch) ||
+                patient.CitizenId.Contains(normalizedSearch));
+        }
+
+        var totalItems = await patientsQuery.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalItems / (double)PatientDashboardViewModel.PageSize));
+        var currentPage = Math.Clamp(page, 1, totalPages);
+        var skip = (currentPage - 1) * PatientDashboardViewModel.PageSize;
+
+        var recentPatients = await patientsQuery
             .OrderByDescending(patient => patient.CreatedAtUtc)
-            .Take(8)
+            .Skip(skip)
+            .Take(PatientDashboardViewModel.PageSize)
             .Select(patient => new PatientSummaryViewModel
             {
                 CitizenId = patient.CitizenId,
@@ -43,11 +61,20 @@ public class PatientsController : Controller
             })
             .ToListAsync();
 
+        var clinic = await dbContext.Clinics.AsNoTracking().FirstOrDefaultAsync(x => x.ClinicCode == clinicCode);
         return View(new PatientDashboardViewModel
         {
             Input = new PatientRegistrationViewModel { ClinicCode = clinicCode },
             RecentPatients = recentPatients,
-            StatusMessage = "พร้อมรับข้อมูลจากบัตรประชาชนและฟอร์มผู้ป่วย"
+            CurrentPage = currentPage,
+            TotalItems = totalItems,
+            TotalPages = totalPages,
+            SearchTerm = normalizedSearch ?? string.Empty,
+            StatusMessage = "พร้อมรับข้อมูลจากบัตรประชาชนและฟอร์มผู้ป่วย",
+            PatientLimit = clinic?.OpdRecordLimit ?? 30,
+            IsUnlimited = clinic?.HasUnlimitedOpdRecords ?? User.IsInRole("SuperAdmin"),
+            ContactName = clinic?.FullName ?? currentUser?.FullName ?? string.Empty,
+            ContactPhone = clinic?.PhoneNumber ?? currentUser?.PhoneNumber ?? string.Empty
         });
     }
 
@@ -67,6 +94,7 @@ public class PatientsController : Controller
         if (existingPatient)
         {
             ModelState.AddModelError(nameof(model.Input.CitizenId), "ผู้ป่วยรายนี้ถูกบันทึกไว้แล้ว");
+            ViewData["DuplicateCitizenId"] = model.Input.CitizenId;
             return await ReloadDashboard(model, clinicCode, "พบข้อมูลซ้ำในระบบ");
         }
 
@@ -95,7 +123,18 @@ public class PatientsController : Controller
         }
 
         dbContext.Patients.Add(patient);
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            dbContext.Entry(patient).State = EntityState.Detached;
+            ModelState.AddModelError(nameof(model.Input.CitizenId), "เลขบัตรประชาชนนี้ถูกบันทึกโดยรายการอื่นแล้ว");
+            ViewData["DuplicateCitizenId"] = model.Input.CitizenId;
+            return await ReloadDashboard(model, clinicCode, "พบข้อมูลซ้ำในระบบ");
+        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -257,10 +296,17 @@ public class PatientsController : Controller
 
     private async Task<IActionResult> ReloadDashboard(PatientDashboardViewModel model, string clinicCode, string? statusMessage)
     {
-        var recentPatients = await dbContext.Patients
+        var patientsQuery = dbContext.Patients
             .Where(patient => patient.ClinicCode == clinicCode)
+            .AsNoTracking();
+
+        var totalItems = await patientsQuery.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalItems / (double)PatientDashboardViewModel.PageSize));
+        var currentPage = Math.Clamp(1, 1, totalPages);
+
+        var recentPatients = await patientsQuery
             .OrderByDescending(patient => patient.CreatedAtUtc)
-            .Take(8)
+            .Take(PatientDashboardViewModel.PageSize)
             .Select(patient => new PatientSummaryViewModel
             {
                 CitizenId = patient.CitizenId,
@@ -274,7 +320,17 @@ public class PatientsController : Controller
 
         model.Input.ClinicCode = clinicCode;
         model.RecentPatients = recentPatients;
+        model.CurrentPage = currentPage;
+        model.TotalItems = totalItems;
+        model.TotalPages = totalPages;
+        model.SearchTerm = string.Empty;
         model.StatusMessage = statusMessage;
+        var clinic = await dbContext.Clinics.AsNoTracking().FirstOrDefaultAsync(x => x.ClinicCode == clinicCode);
+        var user = await userManager.GetUserAsync(User);
+        model.PatientLimit = clinic?.OpdRecordLimit ?? 30;
+        model.IsUnlimited = clinic?.HasUnlimitedOpdRecords ?? User.IsInRole("SuperAdmin");
+        model.ContactName = clinic?.FullName ?? user?.FullName ?? string.Empty;
+        model.ContactPhone = clinic?.PhoneNumber ?? user?.PhoneNumber ?? string.Empty;
         return View("Index", model);
     }
 

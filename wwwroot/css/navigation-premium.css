@@ -1,0 +1,189 @@
+:root {
+    --sc-nav-navy: #0d2f4f;
+    --sc-nav-blue: #125f9f;
+    --sc-nav-cyan: #16b6c8;
+    --sc-nav-mint: #50dbc0;
+    --sc-nav-text: #f7fbff;
+    --sc-nav-muted: #b9d6e8;
+}
+
+.smartclinic-navbar {
+    min-height: auto;
+    margin-bottom: clamp(.8rem, 1.5vw, 1.35rem);
+    padding: .65rem clamp(.25rem, 1.2vw, 1.15rem) .55rem;
+    border-bottom: 1px solid rgba(255,255,255,.16);
+    background:
+        radial-gradient(circle at 88% -80%, rgba(80,219,192,.34), transparent 36%),
+        radial-gradient(circle at 35% -120%, rgba(54,167,255,.35), transparent 44%),
+        linear-gradient(115deg, var(--sc-nav-navy) 0%, #174e7f 48%, var(--sc-nav-blue) 100%) !important;
+    box-shadow: 0 12px 32px rgba(8,39,65,.2);
+}
+
+.smartclinic-navbar .container-fluid { max-width: 1920px; margin: 0 auto; }
+.smartclinic-brand { gap: .68rem; padding: .15rem 0; color: #fff !important; }
+.brand-mark {
+    width: clamp(2.3rem, 2.4vw, 2.7rem);
+    height: clamp(2.3rem, 2.4vw, 2.7rem);
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: .82rem;
+    background: linear-gradient(145deg, rgba(255,255,255,.3), rgba(255,255,255,.08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 7px 18px rgba(5,31,52,.22);
+    font-size: clamp(.72rem, .65vw, .88rem);
+    letter-spacing: -.02em;
+}
+.brand-copy strong { color:#fff; font-size:clamp(.92rem, .9vw, 1.12rem); font-weight:850; letter-spacing:-.02em; }
+.brand-copy small { color:var(--sc-nav-muted); font-size:clamp(.5rem, .46vw, .62rem); font-weight:750; letter-spacing:.1em; }
+
+.smartclinic-main-links { gap:.22rem; scrollbar-color:rgba(255,255,255,.3) transparent; scrollbar-width:thin; }
+.smartclinic-main-links::-webkit-scrollbar { height:5px; }
+.smartclinic-main-links::-webkit-scrollbar-thumb { border-radius:9px; background:rgba(255,255,255,.28); }
+.smartclinic-navbar .nav-link {
+    position:relative;
+    display:inline-flex;
+    min-height:2.35rem;
+    align-items:center;
+    gap:.4rem;
+    padding:.38rem .58rem;
+    border:1px solid transparent;
+    border-radius:.72rem;
+    color:rgba(244,250,255,.82) !important;
+    font-size:clamp(.7rem, .61vw, .84rem);
+    font-weight:720;
+    line-height:1.15;
+    white-space:nowrap;
+    transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+.smartclinic-navbar .nav-link::before {
+    content:attr(data-nav-icon);
+    display:inline-grid;
+    width:1.62rem;
+    height:1.62rem;
+    flex:0 0 1.62rem;
+    place-items:center;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:.52rem;
+    background:rgba(255,255,255,.1);
+    color:#dff8ff;
+    font-size:.48rem;
+    font-weight:900;
+    letter-spacing:.02em;
+}
+.smartclinic-navbar .nav-link:hover {
+    border-color:rgba(255,255,255,.14);
+    background:rgba(255,255,255,.11);
+    color:#fff !important;
+    transform:translateY(-1px);
+}
+.smartclinic-navbar .nav-link.active {
+    border-color:rgba(111,233,220,.58);
+    background:linear-gradient(135deg,rgba(38,190,198,.33),rgba(50,134,220,.31));
+    color:#fff !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 5px 14px rgba(3,35,60,.18);
+}
+.smartclinic-navbar .nav-link.active::before {
+    border-color:rgba(255,255,255,.28);
+    background:linear-gradient(145deg,var(--sc-nav-mint),var(--sc-nav-cyan));
+    color:#073e50;
+    box-shadow:0 4px 10px rgba(22,182,200,.25);
+}
+
+.nav-tool,.nav-account { min-height:2.55rem; padding:0; }
+.theme-label { color:#d4e8f5; font-size:clamp(.59rem,.52vw,.7rem); }
+.theme-select {
+    min-width:112px;
+    min-height:2.45rem;
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:.72rem;
+    background-color:rgba(255,255,255,.96);
+    color:#163e62;
+    font-size:clamp(.68rem,.59vw,.8rem);
+    font-weight:700;
+}
+.user-chip {
+    min-height:2.45rem;
+    padding:.25rem .68rem .25rem .28rem;
+    border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.95);
+    color:#173f61;
+    font-size:clamp(.68rem,.59vw,.8rem);
+    box-shadow:0 5px 14px rgba(5,34,57,.13);
+}
+.user-avatar {
+    display:grid;
+    width:1.8rem;
+    height:1.8rem;
+    place-items:center;
+    border-radius:50%;
+    background:linear-gradient(145deg,#198fd1,#265cc2);
+    color:#fff;
+    font-size:.68rem;
+    font-weight:900;
+}
+.nav-account .btn { min-height:2.42rem; display:inline-flex; align-items:center; border-radius:.7rem; font-size:clamp(.65rem,.56vw,.77rem); font-weight:750; white-space:nowrap; }
+.navbar-toggler { width:2.65rem; height:2.5rem; padding:.45rem; border:1px solid rgba(255,255,255,.28); border-radius:.72rem; background:rgba(255,255,255,.1); }
+.navbar-toggler:focus { box-shadow:0 0 0 3px rgba(80,219,192,.22); }
+
+@media (min-width:1200px) {
+    .smartclinic-navbar .container-fluid { flex-wrap:wrap; }
+    #smartclinicMainNav { display:flex!important; min-width:0; flex:1 1 calc(100% - 190px); flex-wrap:wrap; column-gap:.65rem!important; row-gap:.45rem!important; }
+    .smartclinic-main-links {
+        order:3;
+        display:grid;
+        width:100%;
+        flex:0 0 100%;
+        grid-auto-columns:max-content;
+        grid-auto-flow:column;
+        justify-content:start;
+        overflow-x:auto;
+        margin:.08rem 0 0!important;
+        padding:.48rem 0 .22rem;
+        border-top:1px solid rgba(255,255,255,.12);
+    }
+    .nav-tool { order:1; margin-left:auto; }
+    .nav-account { order:2; }
+}
+
+@media (min-width:1600px) {
+    .smartclinic-main-links { justify-content:center; }
+    .smartclinic-navbar .nav-link { padding-right:.68rem; padding-left:.68rem; }
+}
+
+@media (max-width:1199.98px) {
+    .smartclinic-navbar { padding:.58rem .5rem; }
+    .smartclinic-navbar .navbar-collapse {
+        max-height:calc(100vh - 5rem);
+        margin-top:.7rem;
+        padding:.8rem;
+        overflow-y:auto;
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:1rem;
+        background:rgba(7,39,65,.74);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 30px rgba(5,28,48,.22);
+        backdrop-filter:blur(18px);
+    }
+    .smartclinic-main-links { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.42rem; }
+    .smartclinic-navbar .nav-link { width:100%; min-height:2.75rem; padding:.48rem .58rem; border-color:rgba(255,255,255,.08); background:rgba(255,255,255,.055); font-size:clamp(.75rem,1.2vw,.88rem); }
+    .nav-tool,.nav-account { display:flex!important; margin-top:.65rem; padding-top:.65rem; border-top:1px solid rgba(255,255,255,.12); }
+    .nav-account { flex-wrap:wrap; }
+}
+
+@media (max-width:767.98px) {
+    .smartclinic-main-links { grid-template-columns:1fr; }
+    .smartclinic-navbar .navbar-collapse { padding:.65rem; }
+    .nav-tool { display:grid!important; grid-template-columns:auto minmax(0,1fr); }
+    .theme-select { width:100%; }
+    .nav-account { display:grid!important; grid-template-columns:1fr 1fr; }
+    .user-chip { grid-column:1/-1; justify-content:flex-start; }
+    .nav-account form,.nav-account form .btn,.nav-account>a { width:100%; justify-content:center; }
+}
+
+@media (max-width:420px) {
+    .brand-copy strong { font-size:.9rem; }
+    .brand-copy small { font-size:.48rem; }
+    .nav-account { grid-template-columns:1fr; }
+    .user-chip { grid-column:auto; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .smartclinic-navbar .nav-link { transition:none; }
+}

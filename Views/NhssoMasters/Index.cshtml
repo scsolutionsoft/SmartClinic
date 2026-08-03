@@ -6,16 +6,17 @@
 <section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
     <div class="row align-items-center g-4">
         <div class="col-lg-8">
-            <span class="badge bg-light text-dark mb-3">SuperAdmin</span>
+            <span class="hero-symbol mb-3" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 2 7v2h20V7L12 2ZM4 11v7H2v3h20v-3h-2v-7h-3v7h-3v-7h-4v7H7v-7H4Z"/></svg></span>
             <h1 class="display-5 fw-semibold mb-3">NHSO Clinic Master</h1>
             <p class="lead mb-0">จัดการรายการคลินิกจาก สปสช. เพื่อให้ระบบลงทะเบียนใช้ข้อมูลทะเบียนกลางเท่านั้น</p>
         </div>
         <div class="col-lg-4">
             <div class="glass-card p-3 p-lg-4 rounded-4">
-                <div class="fw-semibold mb-2">@Model.StatusMessage</div>
-                <div class="small opacity-75">- Import CSV</div>
-                <div class="small opacity-75">- Enable/Disable clinic</div>
-                <div class="small opacity-75">- 10-char alphanumeric code</div>
+                <div class="hero-mini-stats">
+                    <span><strong>CSV</strong><small>นำเข้า</small></span>
+                    <span><strong>10</strong><small>หลัก</small></span>
+                    <span><strong>✓</strong><small>สถานะ</small></span>
+                </div>
             </div>
         </div>
     </div>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SmartClinic.Web.Models;
 using SmartClinic.Web.ViewModels;
 
@@ -45,6 +46,16 @@ public class AccountController : Controller
         }
 
         var user = await userManager.FindByNameAsync(model.UserName);
+        if (!string.IsNullOrWhiteSpace(user?.ClinicCode))
+        {
+            var db = HttpContext.RequestServices.GetRequiredService<SmartClinic.Web.Data.ApplicationDbContext>();
+            var clinic = await db.Clinics.AsNoTracking().FirstOrDefaultAsync(x => x.ClinicCode == user.ClinicCode);
+            if (clinic is not null && clinic.Status != "Active")
+            {
+                await signInManager.SignOutAsync();
+                return RedirectToAction(nameof(Suspended));
+            }
+        }
         if (user?.MustChangePassword == true)
         {
             return RedirectToAction(nameof(ChangePassword));
@@ -57,6 +68,9 @@ public class AccountController : Controller
 
         return RedirectToAction("Index", "Home");
     }
+
+    [HttpGet, AllowAnonymous]
+    public IActionResult Suspended() => View();
 
     [HttpGet]
     [Authorize]

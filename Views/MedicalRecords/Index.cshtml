@@ -1,4 +1,7 @@
 @model MedicalRecordsDashboardViewModel
+<link rel="stylesheet" href="~/css/opd-drug-assistant.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/opd-drug-meta.css" asp-append-version="true" />
+<style>#drugAssistantAuto [data-bs-target="#opdExternalDrugModal"]{display:none!important}</style>
 @{
     ViewData["Title"] = "เวชระเบียน OPD";
 }
@@ -6,13 +9,23 @@
 <section class="opd-page-header mb-4">
     <div>
         <div class="text-uppercase text-body-secondary small fw-semibold mb-1">OPD Medical Records</div>
-        <h1 class="h2 fw-semibold mb-1">เพิ่มเวชระเบียนจาก PDF</h1>
+        <h1 class="h2 fw-semibold mb-1">@(Model.EditRecordId.HasValue ? "แก้ไขเวชระเบียน" : "เพิ่มเวชระเบียนจาก PDF")</h1>
         <div class="text-body-secondary">ค้นผู้ป่วย อัปโหลด PDF ตรวจข้อมูล แล้วบันทึกประวัติการรักษา</div>
     </div>
     <div class="opd-status-panel">
         <span class="opd-status-dot"></span>
         <span>@Model.StatusMessage</span>
     </div>
+</section>
+
+<section class="patient-quota-bar @(Model.IsUnlimited ? "unlimited" : Model.RemainingOpdRecords == 0 ? "exhausted" : Model.RemainingOpdRecords <= 5 ? "low" : "") mb-4">
+    <div class="quota-symbol">@(Model.IsUnlimited ? "∞" : "OPD")</div>
+    <div class="quota-copy"><small>เครดิตเวชระเบียน OPD</small><strong>@(Model.IsUnlimited ? "บันทึกได้ไม่จำกัด" : $"ใช้แล้ว {Model.UsedOpdRecords} จาก {Model.OpdRecordLimit} รายการ")</strong><div class="quota-progress"><i style="width:@(Model.IsUnlimited ? 100 : Math.Min(100, Model.OpdRecordLimit == 0 ? 100 : Model.UsedOpdRecords * 100 / Model.OpdRecordLimit))%"></i></div></div>
+    <div class="quota-remaining"><small>คงเหลือ</small><strong>@(Model.IsUnlimited ? "Unlimited" : $"{Model.RemainingOpdRecords} รายการ")</strong></div>
+    @if (!Model.IsUnlimited && Model.RemainingOpdRecords <= 5)
+    {
+        <div class="quota-actions"><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#opdCreditRequestModal">ติดต่อเติมเครดิต</button></div>
+    }
 </section>
 
 <div class="opd-step-strip mb-4">
@@ -35,8 +48,8 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-xl-8 col-lg-7">
-        <div class="card shadow-sm border-0 opd-form-card">
+    <div class="col-xl-7 col-lg-6">
+        <div class="card shadow-sm border-0 opd-form-card" id="medical-record-form-card">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h4 fw-semibold mb-0">ข้อมูลเวชระเบียน</h2>
@@ -45,7 +58,11 @@
                     </button>
                 </div>
 
-                <form asp-action="Create" method="post" enctype="multipart/form-data" id="medicalRecordForm">
+                <form asp-action="@(Model.EditRecordId.HasValue ? "Update" : "Create")"
+                      asp-route-id="@Model.EditRecordId"
+                      method="post"
+                      enctype="multipart/form-data"
+                      id="medicalRecordForm">
                     @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
@@ -86,6 +103,13 @@
                             <label asp-for="Input.AuthenticationCode" class="form-label"></label>
                             <input asp-for="Input.AuthenticationCode" class="form-control" id="authenticationCode" />
                         </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch self-pay-switch w-100">
+                                <input asp-for="Input.IsSelfPay" class="form-check-input" />
+                                <label asp-for="Input.IsSelfPay" class="form-check-label fw-semibold"></label>
+                                <div class="form-text">เลือกเมื่อมีการเรียกเก็บค่าบริการ ค่ายา หรือเวชภัณฑ์จากผู้ป่วย</div>
+                            </div>
+                        </div>
 
                         <div class="col-12">
                             <label asp-for="Input.OpdPdfFile" class="form-label"></label>
@@ -96,6 +120,7 @@
                                 </button>
                             </div>
                             <span asp-validation-for="Input.OpdPdfFile" class="text-danger"></span>
+                            <div class="form-text">ไม่จำเป็นต้องแนบไฟล์ หากไม่ได้อ่านข้อมูลจาก OPD Card PDF</div>
                         </div>
                     </div>
                     </section>
@@ -111,12 +136,25 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label asp-for="Input.Diagnosis" class="form-label"></label>
-                            <input asp-for="Input.Diagnosis" class="form-control" id="diagnosisInput" />
+                            <div class="icd-autocomplete" data-icd-mode="primary">
+                                <div class="input-group"><span class="input-group-text icd-code-mark">ICD</span><input asp-for="Input.Diagnosis" class="form-control" id="diagnosisInput" autocomplete="off" placeholder="ค้นหาด้วยรหัส ชื่อโรคภาษาไทย หรือภาษาอังกฤษ" /></div>
+                                <input asp-for="Input.PrimaryIcd10Code" type="hidden" id="primaryIcd10Code" />
+                                <div class="icd-results" id="primaryIcdResults" hidden></div>
+                                <div class="form-text">เลือกจากรายการเพื่อกำหนดรหัสวินิจฉัยหลัก ข้อความที่อ่านจาก PDF ยังคงแก้ไขได้</div>
+                                <div class="icd-selected" id="primaryIcdSelected"></div>
+                            </div>
                             <span asp-validation-for="Input.Diagnosis" class="text-danger"></span>
                         </div>
                         <div class="col-12">
                             <label asp-for="Input.InitialDifferentialDiagnosis" class="form-label"></label>
+                            <div class="icd-autocomplete mb-2" data-icd-mode="differential">
+                                <div class="input-group"><span class="input-group-text icd-code-mark alt">ICD</span><input class="form-control" id="differentialIcdSearch" autocomplete="off" placeholder="เพิ่มรหัสวินิจฉัยแยกโรค (เลือกได้หลายรายการ)" /></div>
+                                <input asp-for="Input.DifferentialIcd10Codes" type="hidden" id="differentialIcd10Codes" />
+                                <div class="icd-results" id="differentialIcdResults" hidden></div>
+                                <div class="icd-selected" id="differentialIcdSelected"></div>
+                            </div>
                             <textarea asp-for="Input.InitialDifferentialDiagnosis" class="form-control" rows="2" id="initialDifferentialDiagnosis"></textarea>
+                            <div class="form-text">สามารถเก็บข้อความวินิจฉัยจาก PDF ควบคู่กับรหัส ICD-10 ได้</div>
                         </div>
                         <div class="col-12">
                             <label asp-for="Input.ChiefComplaint" class="form-label"></label>
@@ -125,6 +163,20 @@
                         <div class="col-12">
                             <label asp-for="Input.PresentIllness" class="form-label"></label>
                             <textarea asp-for="Input.PresentIllness" class="form-control" rows="3" id="presentIllness"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="vital-signs-card">
+                                <div class="vital-signs-head"><div><span class="vital-icon">♥</span><div><strong>สัญญาณชีพและสัดส่วนร่างกาย</strong><small>กรอกเองหรือให้ระบบแยกค่าจาก PDF</small></div></div><span id="vitalStatus">พร้อมรับข้อมูล</span></div>
+                                <div class="vital-input-grid">
+                                    <label><span>อุณหภูมิ</span><div><input asp-for="Input.TemperatureCelsius" type="number" step="0.1" min="25" max="45" id="temperatureCelsius" inputmode="decimal" /><em>°C</em></div></label>
+                                    <label><span>ชีพจร</span><div><input asp-for="Input.PulseRate" type="number" min="20" max="250" id="pulseRate" inputmode="numeric" /><em>ครั้ง/นาที</em></div></label>
+                                    <label><span>การหายใจ</span><div><input asp-for="Input.RespiratoryRate" type="number" min="5" max="100" id="respiratoryRate" inputmode="numeric" /><em>ครั้ง/นาที</em></div></label>
+                                    <label class="vital-bp"><span>ความดันโลหิต</span><div><input asp-for="Input.SystolicPressure" type="number" min="40" max="300" id="systolicPressure" inputmode="numeric" aria-label="ความดันตัวบน" /><b>/</b><input asp-for="Input.DiastolicPressure" type="number" min="20" max="200" id="diastolicPressure" inputmode="numeric" aria-label="ความดันตัวล่าง" /><em>mmHg</em></div></label>
+                                    <label><span>น้ำหนัก</span><div><input asp-for="Input.WeightKilograms" type="number" step="0.1" min="1" max="500" id="weightKilograms" inputmode="decimal" /><em>กก.</em></div></label>
+                                    <label><span>ส่วนสูง</span><div><input asp-for="Input.HeightCentimeters" type="number" step="0.1" min="30" max="250" id="heightCentimeters" inputmode="decimal" /><em>ซม.</em></div></label>
+                                </div>
+                                <div class="bmi-result" id="bmiResult"><div><span>BMI</span><strong id="bmiValue">-</strong><small>กก./ม²</small></div><em id="bmiCategory">กรอกน้ำหนักและส่วนสูงเพื่อคำนวณ</em><input asp-for="Input.BodyMassIndex" type="hidden" id="bodyMassIndex" /></div>
+                            </div>
                         </div>
                         <div class="col-12">
                             <label asp-for="Input.PhysicalExam" class="form-label"></label>
@@ -136,7 +188,13 @@
                         </div>
                         <div class="col-12">
                             <label asp-for="Input.TreatmentAndAdvice" class="form-label"></label>
-                            <textarea asp-for="Input.TreatmentAndAdvice" class="form-control" rows="4" id="treatmentAndAdvice"></textarea>
+                            <div class="opd-drug-assistant" id="opdDrugAssistant">
+                                <div class="oda-head"><div><span>CLINICAL SUPPORT</span><h4>ยาและคำแนะนำ</h4><p>เลือกจากข้อมูลที่คลินิกผูกกับ ICD-10 หรือกรอกเอง</p></div><div class="oda-safety">ผู้ให้บริการต้องตรวจสอบและยืนยันก่อนใช้</div></div>
+                                <div class="oda-mode"><button type="button" class="active" data-drug-mode="auto"><b>แนะนำอัตโนมัติ</b><small>จาก ICD-10 และข้อมูลเดิม</small></button><button type="button" data-drug-mode="manual"><b>เลือกและกรอกเอง</b><small>ใช้ช่องข้อความด้านล่าง</small></button></div>
+                                <div class="oda-auto" id="drugAssistantAuto"><div class="oda-tools"><span id="drugAssistantCodes">กรุณาเลือกการวินิจฉัย ICD-10</span><div><button type="button" class="btn btn-sm btn-outline-primary" id="refreshDrugSuggestions">โหลดคำแนะนำ</button><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#opdExternalDrugModal">ค้นหายาภายนอก</button>@if(User.IsInRole("SuperAdmin")||User.IsInRole("AdminClinic")){<a class="btn btn-sm btn-outline-secondary" asp-controller="DrugCatalog" asp-action="Index" target="_blank">จัดการคลังยา</a>}</div></div><div class="oda-state" id="drugSuggestionState">ระบบจะแสดงยาหลังจากเลือกรหัส ICD-10</div><div class="oda-grid"><div><h5>ยาที่แนะนำ</h5><div id="suggestedDrugList" class="oda-list"></div></div><div><h5>คำแนะนำและคำเตือน</h5><div id="suggestedAdviceList" class="oda-list advice"></div></div></div><div class="oda-footer"><span id="drugSelectionSummary">ยังไม่ได้เลือกรายการ</span><button type="button" class="btn btn-primary" id="applyDrugSuggestions">เพิ่มรายการที่เลือกลงรายงาน</button></div></div>
+                                <div class="oda-manual" id="drugAssistantManual" hidden><div><strong>โหมดกรอกเอง</strong><p>กรอกหรือวางข้อความตามรูปแบบเดิม ระบบจะเก็บไว้กับ OPD โดยไม่เปลี่ยนคลังยากลาง</p></div>@if(User.IsInRole("SuperAdmin")||User.IsInRole("AdminClinic")){<a asp-controller="DrugCatalog" asp-action="Index" target="_blank" class="btn btn-sm btn-outline-primary">เพิ่มข้อมูลใหม่เข้าคลัง</a>}</div>
+                            </div>
+                            <textarea asp-for="Input.TreatmentAndAdvice" class="form-control" rows="6" id="treatmentAndAdvice"></textarea>
                         </div>
                         <div class="col-12">
                             <label asp-for="Input.ReferralDetail" class="form-label"></label>
@@ -173,6 +231,9 @@
                                         <label asp-for="Input.FollowUpClinic" class="form-check-label"></label>
                                     </div>
                                     <input asp-for="Input.FollowUpClinicNote" class="form-control form-control-sm mb-2" id="followUpClinicNote" placeholder="ระบุการนัดที่คลินิก" />
+                                    <input asp-for="Input.FollowUpAppointmentDateTime" type="hidden" id="followUpAppointmentDateTime" />
+                                    <button type="button" class="appointment-picker-button mb-2" id="openAppointmentPicker"><span>◷</span><span><strong id="appointmentPickerText">เลือกวันและเวลานัด</strong><small>แตะเพื่อเปิดปฏิทิน</small></span><b>›</b></button>
+                                    <span asp-validation-for="Input.FollowUpAppointmentDateTime" class="text-danger small"></span>
                                     <div class="form-check">
                                         <input asp-for="Input.FollowUpOther" class="form-check-input" id="followUpOther" />
                                         <label asp-for="Input.FollowUpOther" class="form-check-label"></label>
@@ -234,7 +295,11 @@
                     </section>
 
                     <div class="opd-action-bar mt-4 d-flex gap-2 flex-wrap">
-                        <button type="submit" class="btn btn-primary">บันทึก OPD Card</button>
+                        <button type="@(Model.EditRecordId.HasValue || Model.IsUnlimited || Model.RemainingOpdRecords > 0 ? "submit" : "button")" class="btn btn-primary" @if(!Model.EditRecordId.HasValue && !Model.IsUnlimited && Model.RemainingOpdRecords == 0){<text>data-bs-toggle="modal" data-bs-target="#opdCreditRequestModal"</text>}>@(Model.EditRecordId.HasValue ? "บันทึกการแก้ไข" : Model.IsUnlimited || Model.RemainingOpdRecords > 0 ? "บันทึก OPD Card" : "ติดต่อเติมเครดิต")</button>
+                        @if (Model.EditRecordId.HasValue)
+                        {
+                            <a asp-action="Index" asp-route-patientId="@Model.Input.PatientId" class="btn btn-outline-secondary">ยกเลิก</a>
+                        }
                         <button type="button" class="btn btn-outline-secondary" id="previewSelectedPdfButton" disabled>พรีวิว PDF ที่เลือก</button>
                     </div>
                 </form>
@@ -242,18 +307,51 @@
         </div>
     </div>
 
-    <div class="col-xl-4 col-lg-5">
+    <div class="col-xl-5 col-lg-6" id="latest-records">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h4 fw-semibold mb-0">ประวัติการรักษาล่าสุด</h2>
-                    <span class="badge text-bg-light">@Model.Records.Count รายการ</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge text-bg-light">ทั้งหมด @Model.TotalItems รายการ</span>
+                        <a asp-action="Index" asp-fragment="medical-record-form-card" class="btn btn-primary btn-sm icon-action-btn" title="เพิ่มประวัติการรักษา" aria-label="เพิ่มประวัติการรักษา">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>
+                        </a>
+                    </div>
                 </div>
 
+                <form asp-action="Index" method="get" class="mb-3">
+                    <input type="hidden" name="patientId" value="@Model.Input.PatientId" />
+                    <label for="medical-record-search" class="visually-hidden">ค้นหาชื่อ-นามสกุล หรือเลขบัตรประจำตัวประชาชน</label>
+                    <div class="input-group">
+                        <input id="medical-record-search"
+                               name="search"
+                               value="@Model.SearchTerm"
+                               class="form-control"
+                               placeholder="ค้นหาชื่อ-นามสกุล หรือเลขบัตรประชาชน"
+                               autocomplete="off" />
+                        <button type="submit" class="btn btn-primary icon-action-btn" title="ค้นหา" aria-label="ค้นหา">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 20-5.2-5.2a7.5 7.5 0 1 0-1 1L20 21l1-1ZM5 10.5a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0Z"/></svg>
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                        {
+                            <a asp-action="Index"
+                               asp-route-patientId="@Model.Input.PatientId"
+                               asp-fragment="latest-records"
+                               class="btn btn-outline-secondary icon-action-btn"
+                               title="ล้างการค้นหา"
+                               aria-label="ล้างการค้นหา">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4-6.3-6.3-6.3 6.3-1.4-1.4L9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3 1.4 1.4Z"/></svg>
+                            </a>
+                        }
+                    </div>
+                </form>
+
                 <div class="table-responsive">
-                    <table class="table align-middle">
+                    <table class="table align-middle opd-records-table">
                         <thead>
                             <tr>
+                                <th class="text-center" style="width:58px;">#</th>
                                 <th>ผู้ป่วย</th>
                                 <th>วันที่</th>
                                 <th>Auth</th>
@@ -262,9 +360,13 @@
                             </tr>
                         </thead>
                         <tbody>
+                            @{ var recordIndex = ((Model.CurrentPage - 1) * MedicalRecordsDashboardViewModel.PageSize) + 1; }
                             @foreach (var record in Model.Records)
                             {
                                 <tr>
+                                    <td class="text-center">
+                                        <span class="opd-record-rank">@recordIndex</span>
+                                    </td>
                                     <td>
                                         <div class="fw-semibold">@record.PatientName</div>
                                         <div class="small text-body-secondary">@record.CitizenId</div>
@@ -282,30 +384,113 @@
                                         <div class="text-truncate" title="@record.Diagnosis">@record.Diagnosis</div>
                                     </td>
                                     <td class="text-end">
+                                        <div class="record-icon-actions">
                                         <button type="button"
-                                                class="btn btn-outline-secondary btn-sm"
+                                                class="btn btn-outline-secondary btn-sm icon-action-btn"
                                                 data-preview-pdf-url="@Url.Action("Preview", "MedicalRecords", new { id = record.Id })"
-                                                data-preview-pdf-title="OPD Card: @record.PatientName">
-                                            Preview
+                                                data-preview-pdf-title="OPD Card: @record.PatientName"
+                                                title="ดู PDF"
+                                                aria-label="ดู PDF ของ @record.PatientName">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.5 0-9.5 5.2-9.7 5.4L1.8 12l.5.6C2.5 12.8 6.5 18 12 18s9.5-5.2 9.7-5.4l.5-.6-.5-.6C21.5 10.2 17.5 5 12 5Zm0 11c-3.7 0-6.8-3.1-7.7-4 .9-.9 4-4 7.7-4s6.8 3.1 7.7 4c-.9.9-4 4-7.7 4Zm0-6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg>
                                         </button>
-                                        <a class="btn btn-outline-primary btn-sm" asp-controller="MedicalRecords" asp-action="Report" asp-route-id="@record.Id">
-                                            Report
+                                        <a class="btn btn-outline-primary btn-sm icon-action-btn" asp-controller="MedicalRecords" asp-action="Report" asp-route-id="@record.Id" title="รายงาน" aria-label="เปิดรายงานของ @record.PatientName">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2Zm8 2H8v16h10V8h-4V4Zm2 1.4V6h.6L16 5.4ZM10 11h6v2h-6v-2Zm0 4h6v2h-6v-2Z"/></svg>
                                         </a>
+                                        @if (record.IsSelfPay)
+                                        {
+                                            <a class="btn btn-outline-success btn-sm icon-action-btn"
+                                               asp-controller="MedicalRecords"
+                                               asp-action="SelfPayConsent"
+                                               asp-route-id="@record.Id"
+                                               title="พิมพ์หนังสือยินยอมชำระค่าบริการเอง"
+                                               aria-label="พิมพ์หนังสือยินยอมชำระค่าบริการเองของ @record.PatientName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10v4h2a3 3 0 0 1 3 3v7h-4v6H6v-6H2V9a3 3 0 0 1 3-3h2V2Zm2 2v4h6V4H9Zm-1 9v7h8v-7H8Zm10-2a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/></svg>
+                                            </a>
+                                        }
+                                        <a class="btn btn-outline-warning btn-sm icon-action-btn" asp-action="Edit" asp-route-id="@record.Id" title="แก้ไข" aria-label="แก้ไขประวัติของ @record.PatientName">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.7 4.2 4.2-.7L19.8 7.7l-3.5-3.5L4 16.5Zm2.5 1.7-1 .2.2-1L16.3 6.9l.8.8L6.5 18.2ZM18 2.5l3.5 3.5-1.4 1.4-3.5-3.5L18 2.5Z"/></svg>
+                                        </a>
+                                        <form asp-action="Delete" asp-route-id="@record.Id" method="post" class="d-inline" onsubmit="return confirm('ยืนยันการลบประวัติการรักษาของ @record.PatientName ?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm icon-action-btn" title="ลบ" aria-label="ลบประวัติของ @record.PatientName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l1 2h4v2H3V5h4l1-2Zm-2 6h12l-1 12H7L6 9Zm3 2v7h2v-7H9Zm4 0v7h2v-7h-2Z"/></svg>
+                                            </button>
+                                        </form>
+                                        </div>
                                     </td>
                                 </tr>
+
+                                recordIndex++;
                             }
                             @if (!Model.Records.Any())
                             {
                                 <tr>
-                                    <td colspan="5" class="text-center text-body-secondary py-4">ยังไม่มีประวัติการรักษา</td>
+                                    <td colspan="6" class="text-center text-body-secondary py-4">
+                                        @(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "ยังไม่มีประวัติการรักษา" : "ไม่พบข้อมูลผู้ป่วยที่ค้นหา")
+                                    </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="medical-records-pagination" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : string.Empty)">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-patientId="@Model.Input.PatientId" asp-route-search="@Model.SearchTerm" asp-fragment="latest-records" title="หน้าก่อนหน้า" aria-label="หน้าก่อนหน้า">‹</a>
+                            </li>
+
+                            @{
+                                var pageNumbers = new SortedSet<int> { 1, Model.TotalPages };
+                                for (var pageNumber = Model.CurrentPage - 2; pageNumber <= Model.CurrentPage + 2; pageNumber++)
+                                {
+                                    if (pageNumber >= 1 && pageNumber <= Model.TotalPages)
+                                    {
+                                        pageNumbers.Add(pageNumber);
+                                    }
+                                }
+
+                                int? previousPage = null;
+                            }
+
+                            @foreach (var pageNumber in pageNumbers)
+                            {
+                                if (previousPage.HasValue && pageNumber - previousPage.Value > 1)
+                                {
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                }
+
+                                <li class="page-item @(pageNumber == Model.CurrentPage ? "active" : string.Empty)">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-patientId="@Model.Input.PatientId" asp-route-search="@Model.SearchTerm" asp-fragment="latest-records">@pageNumber</a>
+                                </li>
+
+                                previousPage = pageNumber;
+                            }
+
+                            <li class="page-item disabled">
+                                <span class="page-link">หน้า @Model.CurrentPage / @Model.TotalPages</span>
+                            </li>
+
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : string.Empty)">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-patientId="@Model.Input.PatientId" asp-route-search="@Model.SearchTerm" asp-fragment="latest-records" title="หน้าถัดไป" aria-label="หน้าถัดไป">›</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
             </div>
         </div>
     </div>
+</div>
+
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content appointment-modal">
+        <div class="modal-header"><div><span class="appointment-modal-icon">◷</span><div><h2 class="modal-title">กำหนดวันนัดติดตาม</h2><p>เลือกวันที่และเวลาที่ผู้ป่วยต้องมาคลินิก</p></div></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><div class="appointment-calendar-grid"><label><span>วันที่นัดหมาย</span><input type="date" id="appointmentDate" class="form-control" /></label><label><span>เวลานัดหมาย</span><input type="time" id="appointmentTime" class="form-control" step="300" /></label></div><div class="appointment-preview" id="appointmentPreview"><span>◷</span><div><small>นัดหมาย</small><strong>กรุณาเลือกวันที่และเวลา</strong></div></div></div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button><button type="button" class="btn btn-primary" id="saveAppointment">บันทึกวันนัด</button></div>
+    </div></div>
 </div>
 
 <div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewLabel" aria-hidden="true">
@@ -322,8 +507,40 @@
     </div>
 </div>
 
+<div class="modal fade" id="opdCreditRequestModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content credit-request-modal">
+    <form asp-controller="Subscriptions" asp-action="RequestCredit" method="post">
+        <div class="modal-header"><div><span>SMARTCLINIC OPD CREDIT</span><h2 class="modal-title">ติดต่อเติมเครดิต OPD</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><div class="quota-limit-notice"><strong>เครดิตรวม @Model.OpdRecordLimit รายการ</strong><span>ใช้แล้ว @Model.UsedOpdRecords รายการ · คงเหลือ @Model.RemainingOpdRecords รายการ</span></div><p>ส่งข้อมูลให้ผู้ดูแลติดต่อกลับ หรือติดต่อโดยตรงที่ <a href="tel:0887776775">088-777-6775</a></p><label class="form-label">ชื่อผู้ติดต่อ</label><input name="ContactName" class="form-control" value="@Model.ContactName" required/><label class="form-label">เบอร์โทรศัพท์</label><input name="PhoneNumber" class="form-control" value="@Model.ContactPhone" required/><label class="form-label">จำนวนเครดิต OPD ที่ต้องการ</label><input name="RequestedCredits" type="number" min="1" class="form-control" value="30"/><div class="form-check form-switch unlimited-switch"><input class="form-check-input" type="checkbox" name="RequestUnlimited" value="true" id="requestOpdUnlimited"><label class="form-check-label" for="requestOpdUnlimited"><strong>สนใจแผน Unlimited</strong><small>บันทึกเวชระเบียน OPD ได้ไม่จำกัด</small></label></div><label class="form-label">รายละเอียดเพิ่มเติม</label><textarea name="Note" class="form-control" rows="3"></textarea></div>
+        <div class="modal-footer"><a class="btn btn-outline-dark" href="tel:0887776775">โทร 088-777-6775</a><button class="btn btn-primary">ส่งคำขอติดต่อกลับ</button></div>
+    </form>
+</div></div></div>
+
+@if ((ViewData["QuotaExceeded"] as bool?) == true || (TempData["QuotaError"] as string) is not null)
+{<script>document.addEventListener('DOMContentLoaded',()=>bootstrap.Modal.getOrCreateInstance(document.getElementById('opdCreditRequestModal')).show());</script>}
+@if ((TempData["QuotaRequestSent"] as string) == "true")
+{<script>document.addEventListener('DOMContentLoaded',()=>smartClinicStatusModal.show({type:'success',subtitle:'OPD credit request',state:'ส่งคำขอแล้ว',stateDescription:'ทีมงานได้รับข้อมูลของคุณแล้ว',message:'ผู้ดูแลระบบจะติดต่อกลับเพื่อเติมเครดิต OPD',meta:'ติดต่อด่วน 088-777-6775',actionText:'ตกลง'}));</script>}
+
+<div class="modal fade" id="opdExternalDrugModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content oda-external-modal"><div class="modal-header"><div><small>OFFICIAL DRUG SEARCH</small><h2 class="modal-title">ค้นหาฐานข้อมูลยาไทย</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input class="form-control form-control-lg" placeholder="ค้นหาชื่อยา ชื่อการค้า หรือสารสำคัญ"/><div class="oda-external-links"><a href="https://pertento.fda.moph.go.th/fda_search_drug/SEARCH_DRUG/FRM_SEARCH_DRUG.aspx" target="_blank" rel="noopener"><b>อย.</b><span>ทะเบียนผลิตภัณฑ์ยา</span></a><a href="https://ndi.fda.moph.go.th/drug_info_corporation/char/A/443" target="_blank" rel="noopener"><b>NDI</b><span>ข้อมูลชื่อยาและความแรง</span></a><a href="https://this.or.th/service/tmt/" target="_blank" rel="noopener"><b>TMT</b><span>รหัสยามาตรฐานไทย</span></a></div><p>ตรวจสอบข้อมูลจากแหล่งทางการก่อนนำมาใช้ทุกครั้ง ระบบจะไม่เพิ่มยาเข้าคลังโดยอัตโนมัติ</p></div></div></div></div>
+<script src="~/js/opd-drug-assistant.js" asp-append-version="true"></script>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    @if (ViewData["DuplicateAuthenticationCode"] is string duplicateAuthenticationCode)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'warning',
+                    subtitle: 'OPD Authentication Code',
+                    state: 'Duplicate',
+                    stateDescription: 'ไม่สามารถบันทึกข้อมูลซ้ำได้',
+                    message: 'Authentication Code นี้ถูกใช้กับเวชระเบียน OPD รายการอื่นแล้ว กรุณาตรวจสอบหรือระบุรหัสใหม่',
+                    meta: 'Authentication Code: @duplicateAuthenticationCode',
+                    actionText: 'กลับไปตรวจสอบ'
+                });
+            });
+        </script>
+    }
     <script>
         (function () {
             const patientSearchBox = document.getElementById('patientSearchBox');
@@ -350,10 +567,24 @@
             childToggle?.addEventListener('change', toggleChildFields);
             toggleChildFields();
 
+            const followUpNoneChoice=document.getElementById('followUpNone'),followUpPhoneChoice=document.getElementById('followUpPhone'),followUpClinic=document.getElementById('followUpClinic'),followUpOtherChoice=document.getElementById('followUpOther'),appointmentValue=document.getElementById('followUpAppointmentDateTime'),appointmentButton=document.getElementById('openAppointmentPicker'),appointmentText=document.getElementById('appointmentPickerText'),appointmentDate=document.getElementById('appointmentDate'),appointmentTime=document.getElementById('appointmentTime'),appointmentPreview=document.querySelector('#appointmentPreview strong'),saveAppointment=document.getElementById('saveAppointment'),appointmentModalElement=document.getElementById('appointmentModal');
+            const appointmentModal=appointmentModalElement?bootstrap.Modal.getOrCreateInstance(appointmentModalElement):null;
+            function formatAppointment(value){if(!value)return null;const date=new Date(value);if(Number.isNaN(date.getTime()))return null;return new Intl.DateTimeFormat('th-TH',{dateStyle:'long',timeStyle:'short'}).format(date)+' น.'}
+            function refreshAppointment(){const text=formatAppointment(appointmentValue?.value);appointmentText.textContent=text||'เลือกวันและเวลานัด';appointmentButton?.classList.toggle('selected',!!text);if(appointmentButton)appointmentButton.disabled=!followUpClinic?.checked}
+            function openAppointment(){const current=(appointmentValue?.value||'').slice(0,16);if(current){const parts=current.split('T');appointmentDate.value=parts[0]||'';appointmentTime.value=parts[1]||''}else{const soon=new Date(Date.now()+24*60*60*1000);appointmentDate.value=soon.toISOString().slice(0,10);appointmentTime.value='09:00'}appointmentDate.min=new Date().toISOString().slice(0,10);updateAppointmentPreview();appointmentModal?.show()}
+            function updateAppointmentPreview(){const value=appointmentDate.value&&appointmentTime.value?`${appointmentDate.value}T${appointmentTime.value}`:'';appointmentPreview.textContent=formatAppointment(value)||'กรุณาเลือกวันที่และเวลา'}
+            const followUpChoices=[followUpNoneChoice,followUpPhoneChoice,followUpClinic,followUpOtherChoice].filter(Boolean);
+            followUpChoices.forEach(choice=>choice.addEventListener('change',()=>{if(choice.checked){followUpChoices.forEach(other=>{if(other!==choice)other.checked=false})}if(!followUpClinic.checked){appointmentValue.value='';refreshAppointment()}else if(choice===followUpClinic&&!appointmentValue.value){openAppointment()}refreshAppointment()}));
+            const initiallyChecked=[followUpClinic,followUpPhoneChoice,followUpOtherChoice,followUpNoneChoice].find(choice=>choice?.checked);if(initiallyChecked)followUpChoices.forEach(choice=>{if(choice!==initiallyChecked)choice.checked=false});refreshAppointment();
+            appointmentButton?.addEventListener('click',openAppointment);appointmentDate?.addEventListener('input',updateAppointmentPreview);appointmentTime?.addEventListener('input',updateAppointmentPreview);
+            saveAppointment?.addEventListener('click',()=>{if(!appointmentDate.value||!appointmentTime.value){appointmentDate.reportValidity();appointmentTime.reportValidity();return}appointmentValue.value=`${appointmentDate.value}T${appointmentTime.value}`;refreshAppointment();appointmentModal?.hide()});refreshAppointment();
+
             function selectPatient(item) {
                 if (!item) return;
                 patientIdInput.value = item.id;
                 citizenIdInput.value = item.citizenId;
+                setValue('serviceRecipientId', item.serviceRecipientId);
+                setValue('authenticationCode', '');
                 patientSearchBox.value = item.fullName;
                 selectedPatientText.textContent = item.text || `${item.fullName} (${item.citizenId})`;
                 patientResults.style.display = 'none';
@@ -438,6 +669,63 @@
                 }, 250);
             });
 
+            const primaryIcdInput = document.getElementById('diagnosisInput');
+            const primaryIcdCode = document.getElementById('primaryIcd10Code');
+            const primaryIcdResults = document.getElementById('primaryIcdResults');
+            const primaryIcdSelected = document.getElementById('primaryIcdSelected');
+            const differentialIcdSearch = document.getElementById('differentialIcdSearch');
+            const differentialIcdCodes = document.getElementById('differentialIcd10Codes');
+            const differentialIcdResults = document.getElementById('differentialIcdResults');
+            const differentialIcdSelected = document.getElementById('differentialIcdSelected');
+            let icdTimer;
+            const icdLabels = new Map();
+
+            function createIcdResult(item, onSelect) {
+                const button = document.createElement('button'); button.type = 'button'; button.className = 'icd-result-item';
+                const code = document.createElement('strong'); code.textContent = item.displayCode || item.code;
+                const names = document.createElement('span'); names.textContent = item.thaiName || item.englishName;
+                const english = document.createElement('small'); english.textContent = [item.englishName, item.blockCode, item.blockTitle].filter(Boolean).join(' · ');
+                button.append(code, names, english); button.addEventListener('click', () => onSelect(item)); return button;
+            }
+            async function searchIcd(query, results, onSelect) {
+                window.clearTimeout(icdTimer); const term = (query || '').trim();
+                if (!term) { results.hidden = true; results.replaceChildren(); return; }
+                icdTimer = window.setTimeout(async () => {
+                    const response = await fetch(`/MedicalRecords/SearchIcd10?q=${encodeURIComponent(term)}`);
+                    const items = await response.json(); results.replaceChildren();
+                    if (!items.length) { const empty=document.createElement('div');empty.className='icd-result-empty';empty.textContent='ไม่พบรหัส ICD-10 ที่ตรงกัน';results.append(empty); }
+                    else items.forEach(item => results.append(createIcdResult(item, onSelect)));
+                    results.hidden = false;
+                }, 220);
+            }
+            function renderPrimary(item) {
+                primaryIcdCode.value = item?.code || ''; primaryIcdSelected.replaceChildren();
+                if (!item?.code) return; icdLabels.set(item.code, item); const chip=document.createElement('span');chip.className='icd-chip primary';chip.textContent=`หลัก · ${item.code} · ${item.thaiName || item.englishName}`;primaryIcdSelected.append(chip);
+            }
+            function renderDifferential() {
+                differentialIcdSelected.replaceChildren(); const codes=(differentialIcdCodes.value||'').split(',').filter(Boolean);
+                codes.forEach(code => { const item=icdLabels.get(code)||{code,thaiName:''};const chip=document.createElement('span');chip.className='icd-chip';const text=document.createElement('span');text.textContent=`${code}${item.thaiName?' · '+item.thaiName:''}`;const remove=document.createElement('button');remove.type='button';remove.setAttribute('aria-label',`ลบ ${code}`);remove.textContent='×';remove.onclick=()=>{differentialIcdCodes.value=codes.filter(x=>x!==code).join(',');renderDifferential()};chip.append(text,remove);differentialIcdSelected.append(chip); });
+            }
+            function syncDiagnosisSummary() {
+                const codes=[primaryIcdCode.value,...(differentialIcdCodes.value||'').split(',')].filter(Boolean);
+                const names=codes.map(code=>{const name=icdLabels.get(code)?.englishName;return name?`${code} - ${name}`:null}).filter(Boolean);
+                if (names.length) document.getElementById('initialDifferentialDiagnosis').value=[...new Set(names)].join(', ');
+            }
+            function selectPrimary(item, updateSummary = true) { primaryIcdInput.value = `${item.thaiName || item.englishName} - ${item.code}`; renderPrimary(item); primaryIcdResults.hidden=true; if(updateSummary)syncDiagnosisSummary(); }
+            function selectDifferential(item, updateSummary = true) { icdLabels.set(item.code,item);const codes=(differentialIcdCodes.value||'').split(',').filter(Boolean);if(!codes.includes(item.code))codes.push(item.code);differentialIcdCodes.value=codes.join(',');differentialIcdSearch.value='';differentialIcdResults.hidden=true;renderDifferential();if(updateSummary)syncDiagnosisSummary(); }
+            primaryIcdInput?.addEventListener('input', () => { if (primaryIcdCode.value) renderPrimary(null); searchIcd(primaryIcdInput.value, primaryIcdResults, selectPrimary); });
+            differentialIcdSearch?.addEventListener('input', () => searchIcd(differentialIcdSearch.value, differentialIcdResults, selectDifferential));
+            document.addEventListener('click', e => { if (!e.target.closest('.icd-autocomplete')) { primaryIcdResults.hidden=true; differentialIcdResults.hidden=true; } });
+            if (primaryIcdCode?.value) renderPrimary({code:primaryIcdCode.value,thaiName:''}); renderDifferential();
+            async function matchPdfIcd(text, differential) {
+                if (!text) return; const response=await fetch(`/MedicalRecords/MatchIcd10?text=${encodeURIComponent(text)}`);const items=await response.json();
+                if (!items.length) return; if (differential) items.forEach(item=>selectDifferential(item,false)); else renderPrimary(items[0]);
+            }
+
+            const weightInput=document.getElementById('weightKilograms'),heightInput=document.getElementById('heightCentimeters'),bmiInput=document.getElementById('bodyMassIndex'),bmiValue=document.getElementById('bmiValue'),bmiCategory=document.getElementById('bmiCategory'),bmiResult=document.getElementById('bmiResult');
+            function calculateBmi(){const weight=parseFloat(weightInput?.value),height=parseFloat(heightInput?.value)/100;if(!weight||!height){bmiInput.value='';bmiValue.textContent='-';bmiCategory.textContent='กรอกน้ำหนักและส่วนสูงเพื่อคำนวณ';bmiResult.dataset.level='';return}const bmi=weight/(height*height);bmiInput.value=bmi.toFixed(2);bmiValue.textContent=bmi.toFixed(2);let label='น้ำหนักปกติ',level='normal';if(bmi<18.5){label='น้ำหนักต่ำกว่าเกณฑ์';level='low'}else if(bmi>=30){label='อ้วน';level='high'}else if(bmi>=25){label='น้ำหนักเกิน';level='warn'}bmiCategory.textContent=label;bmiResult.dataset.level=level}
+            weightInput?.addEventListener('input',calculateBmi);heightInput?.addEventListener('input',calculateBmi);calculateBmi();
+
             pdfInput?.addEventListener('change', function () {
                 if (selectedPdfUrl) URL.revokeObjectURL(selectedPdfUrl);
                 const file = pdfInput.files && pdfInput.files[0];
@@ -492,9 +780,20 @@
                     setValue('authenticationCode', data.authenticationCode);
                     setValue('diagnosisInput', data.diagnosis);
                     setValue('initialDifferentialDiagnosis', data.initialDifferentialDiagnosis);
+                    renderPrimary(null); differentialIcdCodes.value = ''; renderDifferential();
+                    await matchPdfIcd(data.diagnosis, false);
+                    await matchPdfIcd(data.initialDifferentialDiagnosis, true);
                     setValue('chiefComplaint', data.chiefComplaint);
                     setValue('presentIllness', data.presentIllness);
                     setValue('physicalExam', data.physicalExam);
+                    setValue('temperatureCelsius', data.temperatureCelsius);
+                    setValue('pulseRate', data.pulseRate);
+                    setValue('respiratoryRate', data.respiratoryRate);
+                    setValue('systolicPressure', data.systolicPressure);
+                    setValue('diastolicPressure', data.diastolicPressure);
+                    setValue('weightKilograms', data.weightKilograms);
+                    setValue('heightCentimeters', data.heightCentimeters);
+                    calculateBmi();
                     setValue('problemPhysicalExam', data.problemPhysicalExam);
                     setValue('treatmentAndAdvice', data.treatmentAndAdvice);
                     setValue('referralDetail', data.referralDetail);
@@ -560,6 +859,36 @@
                     message: 'ระบบบันทึก OPD Card PDF และรายละเอียดการรักษาลงฐานข้อมูลแล้ว',
                     meta: 'PDF stored in SQL Server',
                     actionText: 'Close'
+                });
+            });
+        </script>
+    }
+    else if ((TempData["StatusModal"] as string) == "record-updated")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Medical record',
+                    state: 'Updated',
+                    stateDescription: 'แก้ไขข้อมูลเรียบร้อย',
+                    message: 'ระบบบันทึกการแก้ไขประวัติการรักษาลงฐานข้อมูลแล้ว',
+                    actionText: 'ปิด'
+                });
+            });
+        </script>
+    }
+    else if ((TempData["StatusModal"] as string) == "record-deleted")
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'success',
+                    subtitle: 'Medical record',
+                    state: 'Deleted',
+                    stateDescription: 'ลบข้อมูลเรียบร้อย',
+                    message: 'ระบบลบประวัติการรักษาที่เลือกออกจากฐานข้อมูลแล้ว',
+                    actionText: 'ปิด'
                 });
             });
         </script>

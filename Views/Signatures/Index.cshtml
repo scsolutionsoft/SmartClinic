@@ -6,16 +6,17 @@
 <section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
     <div class="row align-items-center g-4">
         <div class="col-lg-8">
-            <span class="badge bg-light text-dark mb-3">Phase 4</span>
+            <span class="hero-symbol mb-3" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18.5V21h2.5L18.8 8.7l-2.5-2.5L4 18.5Zm16.7-12.7a1 1 0 0 0 0-1.4l-1.1-1.1a1 1 0 0 0-1.4 0l-1 1 2.5 2.5 1-1Z"/></svg></span>
             <h1 class="display-5 fw-semibold mb-3">ระบบลายเซ็นผู้รับบริการ</h1>
             <p class="lead mb-0">รองรับอัปโหลดลายเซ็นรายคนและหลายไฟล์ โดยผูกกับเลขบัตรประชาชน 13 หลักตามระเบียนประวัติ</p>
         </div>
         <div class="col-lg-4">
             <div class="glass-card p-3 p-lg-4 rounded-4">
-                <div class="fw-semibold mb-2">@Model.StatusMessage</div>
-                <div class="small opacity-75">- Filename: 13 digits + extension</div>
-                <div class="small opacity-75">- Single / Batch upload</div>
-                <div class="small opacity-75">- Link to medical report</div>
+                <div class="hero-mini-stats">
+                    <span><strong>@Model.TotalItems</strong><small>ลายเซ็น</small></span>
+                    <span><strong>13</strong><small>หลัก</small></span>
+                    <span><strong>PDF</strong><small>รายงาน</small></span>
+                </div>
             </div>
         </div>
     </div>
@@ -26,20 +27,27 @@
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body p-4">
                 <h2 class="h4 fw-semibold mb-3">อัปโหลดลายเซ็นรายคน</h2>
-                <form asp-action="UploadSingle" method="post" enctype="multipart/form-data">
+                <form asp-action="UploadSingle" method="post" enctype="multipart/form-data" id="signatureSingleUploadForm">
                     @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                     <div class="mb-3">
                         <label asp-for="Input.CitizenId" class="form-label"></label>
-                        <input asp-for="Input.CitizenId" class="form-control" placeholder="เลขบัตรประชาชน 13 หลัก" />
+                        <input asp-for="Input.CitizenId" class="form-control" placeholder="เลขบัตรประชาชน 13 หลัก" id="signatureCitizenId" />
                         <span asp-validation-for="Input.CitizenId" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="Input.SignatureFile" class="form-label"></label>
-                        <input asp-for="Input.SignatureFile" type="file" class="form-control" accept="image/png,image/jpeg,image/webp" />
+                        <input asp-for="Input.SignatureFile" type="file" class="form-control" accept="image/png,image/jpeg,image/webp" id="signatureSingleFile" />
                         <span asp-validation-for="Input.SignatureFile" class="text-danger"></span>
                     </div>
                     <button type="submit" class="btn btn-primary">อัปโหลดรายคน</button>
+                    <button type="button"
+                            class="btn btn-outline-primary ms-2"
+                            data-bs-toggle="modal"
+                            data-bs-target="#signatureManageModal"
+                            data-new-signature="true">
+                        เซ็นด้วยปากกา
+                    </button>
                 </form>
             </div>
         </div>
@@ -49,11 +57,11 @@
             <div class="card-body p-4">
                 <h2 class="h4 fw-semibold mb-3">อัปโหลดลายเซ็นหลายไฟล์</h2>
                 <p class="text-body-secondary">รูปแบบไฟล์ต้องเป็นเลขบัตร 13 หลักตามด้วยนามสกุล เช่น 1101701234567.png</p>
-                <form asp-action="UploadBatch" method="post" enctype="multipart/form-data">
+                <form asp-action="UploadBatch" method="post" enctype="multipart/form-data" id="signatureBatchUploadForm">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
                         <label asp-for="Input.BatchFiles" class="form-label"></label>
-                        <input asp-for="Input.BatchFiles" type="file" multiple class="form-control" accept="image/png,image/jpeg,image/webp" />
+                        <input asp-for="Input.BatchFiles" type="file" multiple class="form-control" accept="image/png,image/jpeg,image/webp" id="signatureBatchFiles" />
                         <span asp-validation-for="Input.BatchFiles" class="text-danger"></span>
                     </div>
                     <button type="submit" class="btn btn-outline-primary">อัปโหลดหลายไฟล์</button>
@@ -67,44 +75,233 @@
     <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="h4 fw-semibold mb-0">รายการลายเซ็นล่าสุด</h2>
-            <span class="badge text-bg-light">@Model.Items.Count รายการ</span>
+            <span class="badge text-bg-light">ทั้งหมด @Model.TotalItems รายการ</span>
         </div>
+        <form asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
+            <div class="col-md">
+                <label for="signature-search" class="visually-hidden">ค้นหาชื่อ-นามสกุล หรือเลขบัตรประจำตัวประชาชน</label>
+                <input id="signature-search"
+                       name="search"
+                       value="@Model.SearchTerm"
+                       class="form-control"
+                       placeholder="ค้นหาชื่อ-นามสกุล หรือเลขบัตรประจำตัวประชาชน"
+                       autocomplete="off" />
+            </div>
+            <div class="col-md-auto d-flex gap-2">
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+                @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">ล้างตัวกรอง</a>
+                }
+            </div>
+        </form>
         <div class="table-responsive">
-            <table class="table align-middle">
+            <table class="table align-middle signatures-table">
                 <thead>
                     <tr>
-                        <th>เลขบัตรประชาชน</th>
+                        <th class="text-center" style="width:58px;">#</th>
+                        <th style="min-width:220px;">เลขบัตรประชาชน</th>
+                        <th>ชื่อ-นามสกุล</th>
                         <th>ชื่อไฟล์</th>
                         <th>วันที่อัปโหลด</th>
-                        <th class="text-end">พรีวิว</th>
+                        <th class="text-end">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
+                    @{ var signatureIndex = ((Model.CurrentPage - 1) * SignaturesDashboardViewModel.PageSize) + 1; }
                     @foreach (var item in Model.Items)
                     {
                         <tr>
+                            <td class="text-center">
+                                <span class="signature-rank">@signatureIndex</span>
+                            </td>
                             <td>@item.CitizenId</td>
+                            <td>
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <span>@item.FullName</span>
+                                    <img class="signature-patient-avatar" alt="patient photo" src="@item.PatientPhotoUrl" onerror="this.onerror=null;this.src='/img/photo-not-available.svg';" />
+                                </div>
+                            </td>
                             <td>@item.FileName</td>
                             <td>@item.UploadedAtText</td>
                             <td class="text-end">
-                                <img class="signature-thumb" alt="signature" src="@Url.Action("ImageByCitizen", "Signatures", new { citizenId = item.CitizenId })" />
+                                <button type="button"
+                                        class="btn btn-link p-0 border-0 signature-manage-button"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#signatureManageModal"
+                                        data-signature-id="@item.Id"
+                                        data-signature-citizen-id="@item.CitizenId"
+                                        data-signature-file-name="@item.FileName"
+                                        data-signature-image-url="@Url.Action("Image", "Signatures", new { id = item.Id })"
+                                        title="ดู แก้ไข หรือลบลายเซ็น"
+                                        aria-label="จัดการลายเซ็นของ @item.CitizenId">
+                                    <img class="signature-thumb" alt="ลายเซ็น @item.CitizenId" src="@Url.Action("Image", "Signatures", new { id = item.Id })" />
+                                </button>
                             </td>
                         </tr>
+
+                        signatureIndex++;
                     }
                     @if (!Model.Items.Any())
                     {
                         <tr>
-                            <td colspan="4" class="text-center text-body-secondary py-4">ยังไม่มีข้อมูลลายเซ็น</td>
+                            <td colspan="6" class="text-center text-body-secondary py-4">ยังไม่มีข้อมูลลายเซ็น</td>
                         </tr>
                     }
                 </tbody>
             </table>
+        </div>
+        @if (Model.TotalPages > 1)
+        {
+            <nav aria-label="signatures-pagination" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-end mb-0">
+                    <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : string.Empty)">
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-search="@Model.SearchTerm">ก่อนหน้า</a>
+                    </li>
+
+                    @{
+                        var pageNumbers = new SortedSet<int> { 1, Model.TotalPages };
+                        for (var pageNumber = Model.CurrentPage - 2; pageNumber <= Model.CurrentPage + 2; pageNumber++)
+                        {
+                            if (pageNumber >= 1 && pageNumber <= Model.TotalPages)
+                            {
+                                pageNumbers.Add(pageNumber);
+                            }
+                        }
+
+                        int? previousPage = null;
+                    }
+
+                    @foreach (var pageNumber in pageNumbers)
+                    {
+                        if (previousPage.HasValue && pageNumber - previousPage.Value > 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+
+                        <li class="page-item @(pageNumber == Model.CurrentPage ? "active" : string.Empty)">
+                            <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-search="@Model.SearchTerm">@pageNumber</a>
+                        </li>
+
+                        previousPage = pageNumber;
+                    }
+
+                    <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : string.Empty)">
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-search="@Model.SearchTerm">ถัดไป</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="signatureManageModal" tabindex="-1" aria-labelledby="signatureManageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="signatureManageModalLabel">จัดการลายเซ็น</h5>
+                    <div class="small text-body-secondary" id="signatureManageCitizenId"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            </div>
+            <div class="modal-body">
+                <div class="signature-popup-preview mb-4">
+                    <img id="signatureManagePreview" alt="ภาพลายเซ็น" />
+                </div>
+                <div class="small text-body-secondary mb-3">ไฟล์ปัจจุบัน: <span id="signatureManageFileName"></span></div>
+
+                <div class="form-check form-switch signature-background-option mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="signatureRemoveBackground" checked />
+                    <label class="form-check-label fw-semibold" for="signatureRemoveBackground">
+                        ลบพื้นหลังสีขาว/เทาอ่อนก่อนบันทึก
+                    </label>
+                    <div class="form-text">ปิดตัวเลือกนี้เมื่อต้องการเก็บพื้นหลังของรูปต้นฉบับไว้</div>
+                </div>
+
+                <div class="border rounded-3 p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                        <label class="form-label mb-0" for="signatureCanvas">เซ็นด้วยปากกา เมาส์ หรือนิ้ว</label>
+                        <span class="badge text-bg-light" id="signaturePointerStatus">พร้อมเซ็น</span>
+                    </div>
+                    <canvas id="signatureCanvas" class="signature-capture-canvas" aria-label="พื้นที่สำหรับเขียนลายเซ็น"></canvas>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="signatureUndoButton">ย้อนกลับเส้นล่าสุด</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="signatureClearButton">ล้างลายเซ็น</button>
+                        <button type="button" class="btn btn-primary btn-sm ms-auto" id="signatureSaveCanvasButton">บันทึกลายเซ็น PNG</button>
+                    </div>
+                    <form asp-action="Capture" method="post" id="signatureCaptureForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" id="signatureCaptureId" />
+                        <input type="hidden" name="citizenId" id="signatureCaptureCitizenId" />
+                        <input type="hidden" name="signatureData" id="signatureCaptureData" />
+                    </form>
+                </div>
+
+                <form asp-action="Replace" method="post" enctype="multipart/form-data" id="signatureReplaceForm" class="border rounded-3 p-3 mb-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="signatureReplaceId" />
+                    <label for="signatureReplacementFile" class="form-label">อัปโหลดลายเซ็นใหม่ทับไฟล์เดิม</label>
+                    <div class="input-group">
+                        <input type="file" name="signatureFile" id="signatureReplacementFile" class="form-control" accept="image/png,image/jpeg,image/webp" required />
+                        <button type="submit" class="btn btn-primary">บันทึกลายเซ็นใหม่</button>
+                    </div>
+                    <div class="form-text">รองรับ PNG, JPG, JPEG และ WEBP ขนาดไม่เกิน 5 MB</div>
+                    <div class="signature-background-preview mt-3" id="signatureBackgroundPreview" hidden>
+                        <div>
+                            <div class="small fw-semibold mb-2">ภาพต้นฉบับ</div>
+                            <div class="signature-preview-pane signature-preview-checkerboard">
+                                <img id="signatureOriginalPreview" alt="ภาพลายเซ็นต้นฉบับ" />
+                            </div>
+                        </div>
+                        <div>
+                            <div class="small fw-semibold mb-2" id="signatureProcessedPreviewLabel">ผลลัพธ์หลังลบพื้นหลัง</div>
+                            <div class="signature-preview-pane signature-preview-checkerboard">
+                                <img id="signatureProcessedPreview" alt="ตัวอย่างลายเซ็นก่อนบันทึก" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <form asp-action="Delete" method="post" id="signatureDeleteForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="signatureDeleteId" />
+                    <button type="submit" class="btn btn-outline-danger"
+                            onclick="return confirm('ยืนยันการลบลายเซ็นรายการนี้อย่างถาวร?');">
+                        ลบลายเซ็น
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        var validationMessages = ViewData.ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .Distinct()
+            .ToArray();
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'warning',
+                    subtitle: 'Signature upload',
+                    state: 'ข้อมูลไม่ครบ',
+                    stateDescription: 'ไม่สามารถอัปโหลดลายเซ็นได้',
+                    message: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(string.Join(" ", validationMessages))),
+                    actionText: 'กลับไปตรวจสอบข้อมูล'
+                });
+            });
+        </script>
+    }
 
     @if ((TempData["StatusModal"] as string) == "signature-single-created")
     {
@@ -143,6 +340,322 @@
                         { title: 'Filename policy', detail: '13-digit filename validated', time: 'Done' },
                         { title: 'Database', detail: 'Batch records saved to SignImg', time: 'Done' }
                     ]
+                });
+            });
+        </script>
+    }
+
+    <script>
+        (function initializeSignatureUploadValidation() {
+            const showMissingData = (message, items) => {
+                smartClinicStatusModal.show({
+                    type: 'warning',
+                    subtitle: 'Signature upload',
+                    state: 'ข้อมูลไม่ครบ',
+                    stateDescription: 'ยังไม่สามารถอัปโหลดลายเซ็นได้',
+                    message: message,
+                    actionText: 'กลับไปกรอกข้อมูล',
+                    items: items
+                });
+            };
+
+            document.getElementById('signatureSingleUploadForm')?.addEventListener('submit', function (event) {
+                const citizenId = (document.getElementById('signatureCitizenId')?.value || '').replace(/\D/g, '');
+                const hasFile = (document.getElementById('signatureSingleFile')?.files?.length || 0) > 0;
+                const missing = [];
+
+                if (citizenId.length !== 13) {
+                    missing.push({ title: 'เลขบัตรประชาชน', detail: 'กรุณากรอกตัวเลขให้ครบ 13 หลัก', time: 'Required' });
+                }
+                if (!hasFile) {
+                    missing.push({ title: 'ไฟล์ลายเซ็น', detail: 'กรุณาเลือกไฟล์ PNG, JPG, JPEG หรือ WEBP', time: 'Required' });
+                }
+
+                if (missing.length) {
+                    event.preventDefault();
+                    showMissingData('กรุณากรอกข้อมูลและเลือกไฟล์ลายเซ็นให้ครบก่อนอัปโหลด', missing);
+                }
+            });
+
+            document.getElementById('signatureBatchUploadForm')?.addEventListener('submit', function (event) {
+                const fileCount = document.getElementById('signatureBatchFiles')?.files?.length || 0;
+                if (fileCount === 0) {
+                    event.preventDefault();
+                    showMissingData('กรุณาเลือกไฟล์ลายเซ็นอย่างน้อย 1 ไฟล์ก่อนอัปโหลด', [
+                        { title: 'ไฟล์ลายเซ็นหลายไฟล์', detail: 'ชื่อไฟล์ต้องเป็นเลขบัตรประชาชน 13 หลัก', time: 'Required' }
+                    ]);
+                }
+            });
+        })();
+
+        document.getElementById('signatureManageModal')?.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+            const isNew = trigger.hasAttribute('data-new-signature');
+            const id = isNew ? '' : trigger.getAttribute('data-signature-id') || '';
+            const citizenId = isNew
+                ? document.getElementById('signatureCitizenId')?.value?.replace(/\D/g, '') || ''
+                : trigger.getAttribute('data-signature-citizen-id') || '';
+            document.getElementById('signatureReplaceId').value = id;
+            document.getElementById('signatureDeleteId').value = id;
+            document.getElementById('signatureCaptureId').value = id;
+            document.getElementById('signatureCaptureCitizenId').value = citizenId;
+            document.getElementById('signatureManageCitizenId').textContent =
+                `เลขบัตรประชาชน: ${citizenId || 'กรุณากรอกเลขบัตร 13 หลักก่อนเปิดหน้าต่างนี้'}`;
+            document.getElementById('signatureManageFileName').textContent =
+                isNew ? `${citizenId || 'เลขบัตรประชาชน'}.png` : trigger.getAttribute('data-signature-file-name') || '-';
+            const preview = document.getElementById('signatureManagePreview');
+            preview.src = isNew ? '' : trigger.getAttribute('data-signature-image-url') || '';
+            preview.style.display = isNew ? 'none' : '';
+            document.getElementById('signatureReplacementFile').value = '';
+            document.getElementById('signatureRemoveBackground').checked = true;
+            document.getElementById('signatureReplaceForm').style.display = isNew ? 'none' : '';
+            document.getElementById('signatureDeleteForm').style.display = isNew ? 'none' : '';
+        });
+
+        (function initializeSignatureCanvas() {
+            const signatureInkColor = '#0057B8';
+            const canvas = document.getElementById('signatureCanvas');
+            const modal = document.getElementById('signatureManageModal');
+            if (!canvas || !modal) return;
+
+            const context = canvas.getContext('2d');
+            const strokes = [];
+            let activeStroke = null;
+            let drawing = false;
+            let originalPreviewUrl = null;
+
+            function resizeCanvas() {
+                const rect = canvas.getBoundingClientRect();
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = Math.max(1, Math.round(rect.width * ratio));
+                canvas.height = Math.max(1, Math.round(rect.height * ratio));
+                context.setTransform(ratio, 0, 0, ratio, 0, 0);
+                redraw();
+            }
+
+            function redraw() {
+                const rect = canvas.getBoundingClientRect();
+                context.clearRect(0, 0, rect.width, rect.height);
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.strokeStyle = signatureInkColor;
+                strokes.forEach(drawStroke);
+            }
+
+            function drawStroke(stroke) {
+                if (!stroke.length) return;
+                context.beginPath();
+                context.moveTo(stroke[0].x, stroke[0].y);
+                for (let index = 1; index < stroke.length; index++) {
+                    const previous = stroke[index - 1];
+                    const point = stroke[index];
+                    const midX = (previous.x + point.x) / 2;
+                    const midY = (previous.y + point.y) / 2;
+                    context.lineWidth = point.width;
+                    context.quadraticCurveTo(previous.x, previous.y, midX, midY);
+                }
+                if (stroke.length === 1) context.lineTo(stroke[0].x + 0.1, stroke[0].y + 0.1);
+                context.stroke();
+            }
+
+            function pointFromEvent(event) {
+                const rect = canvas.getBoundingClientRect();
+                const pressure = event.pointerType === 'pen' && event.pressure > 0 ? event.pressure : 0.5;
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top,
+                    width: Math.max(1.5, 1.5 + pressure * 3.5)
+                };
+            }
+
+            canvas.addEventListener('pointerdown', function (event) {
+                event.preventDefault();
+                canvas.setPointerCapture(event.pointerId);
+                drawing = true;
+                activeStroke = [pointFromEvent(event)];
+                strokes.push(activeStroke);
+                redraw();
+                document.getElementById('signaturePointerStatus').textContent =
+                    event.pointerType === 'pen' ? 'ตรวจพบปากกา' : event.pointerType === 'touch' ? 'ตรวจพบการสัมผัส' : 'ตรวจพบเมาส์';
+            });
+
+            canvas.addEventListener('pointermove', function (event) {
+                if (!drawing || !activeStroke) return;
+                event.preventDefault();
+                activeStroke.push(pointFromEvent(event));
+                redraw();
+            });
+
+            const endStroke = event => {
+                if (!drawing) return;
+                drawing = false;
+                if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+                activeStroke = null;
+            };
+            canvas.addEventListener('pointerup', endStroke);
+            canvas.addEventListener('pointercancel', endStroke);
+
+            document.getElementById('signatureUndoButton')?.addEventListener('click', function () {
+                strokes.pop();
+                redraw();
+            });
+            document.getElementById('signatureClearButton')?.addEventListener('click', function () {
+                strokes.length = 0;
+                redraw();
+            });
+            document.getElementById('signatureSaveCanvasButton')?.addEventListener('click', function () {
+                const citizenId = document.getElementById('signatureCaptureCitizenId').value;
+                if (!/^\d{13}$/.test(citizenId)) {
+                    alert('กรุณาระบุเลขบัตรประชาชน 13 หลัก');
+                    return;
+                }
+                if (!strokes.some(stroke => stroke.length >= 2)) {
+                    alert('กรุณาเขียนลายเซ็นก่อนบันทึก');
+                    return;
+                }
+                document.getElementById('signatureCaptureData').value = canvas.toDataURL('image/png');
+                document.getElementById('signatureCaptureForm').submit();
+            });
+
+            async function fileToBackgroundRemovedPng(file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    throw new Error('ไฟล์ลายเซ็นต้องมีขนาดไม่เกิน 5 MB');
+                }
+
+                const bitmap = await createImageBitmap(file);
+                const maxDimension = 2048;
+                const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+                const width = Math.max(1, Math.round(bitmap.width * scale));
+                const height = Math.max(1, Math.round(bitmap.height * scale));
+                const processingCanvas = document.createElement('canvas');
+                processingCanvas.width = width;
+                processingCanvas.height = height;
+                const processingContext = processingCanvas.getContext('2d', { willReadFrequently: true });
+                processingContext.drawImage(bitmap, 0, 0, width, height);
+                bitmap.close();
+
+                const image = processingContext.getImageData(0, 0, width, height);
+                const pixels = image.data;
+                for (let index = 0; index < pixels.length; index += 4) {
+                    const red = pixels[index];
+                    const green = pixels[index + 1];
+                    const blue = pixels[index + 2];
+                    const lightest = Math.max(red, green, blue);
+                    const darkest = Math.min(red, green, blue);
+                    const chroma = lightest - darkest;
+
+                    // Remove neutral light backgrounds with a feathered edge.
+                    // Colored or dark ink is preserved.
+                    if (darkest >= 210 && chroma <= 45) {
+                        const retainedAlpha = Math.max(0, Math.min(1, (255 - darkest) / 45));
+                        pixels[index + 3] = Math.round(pixels[index + 3] * retainedAlpha);
+                    }
+                }
+                processingContext.putImageData(image, 0, 0);
+                return processingCanvas.toDataURL('image/png');
+            }
+
+            document.getElementById('signatureReplaceForm')?.addEventListener('submit', async function (event) {
+                const removeBackground = document.getElementById('signatureRemoveBackground')?.checked === true;
+                if (!removeBackground) return;
+
+                event.preventDefault();
+                const fileInput = document.getElementById('signatureReplacementFile');
+                const file = fileInput?.files?.[0];
+                if (!file) {
+                    alert('กรุณาเลือกไฟล์ลายเซ็น');
+                    return;
+                }
+
+                const saveButton = event.submitter;
+                if (saveButton) saveButton.disabled = true;
+                try {
+                    const pngData = await fileToBackgroundRemovedPng(file);
+                    document.getElementById('signatureCaptureData').value = pngData;
+                    document.getElementById('signatureCaptureForm').submit();
+                } catch (error) {
+                    alert(error?.message || 'ไม่สามารถลบพื้นหลังของรูปได้');
+                    if (saveButton) saveButton.disabled = false;
+                }
+            });
+
+            document.getElementById('signatureReplacementFile')?.addEventListener('change', async function () {
+                const file = this.files?.[0];
+                const comparison = document.getElementById('signatureBackgroundPreview');
+                if (!file) {
+                    comparison.hidden = true;
+                    return;
+                }
+                const preview = document.getElementById('signatureManagePreview');
+                const originalPreview = document.getElementById('signatureOriginalPreview');
+                const processedPreview = document.getElementById('signatureProcessedPreview');
+                const processedLabel = document.getElementById('signatureProcessedPreviewLabel');
+                try {
+                    if (originalPreviewUrl) URL.revokeObjectURL(originalPreviewUrl);
+                    originalPreviewUrl = URL.createObjectURL(file);
+                    originalPreview.src = originalPreviewUrl;
+
+                    if (document.getElementById('signatureRemoveBackground')?.checked) {
+                        const processedPng = await fileToBackgroundRemovedPng(file);
+                        preview.src = processedPng;
+                        processedPreview.src = processedPng;
+                        processedLabel.textContent = 'ผลลัพธ์หลังลบพื้นหลัง';
+                    } else {
+                        preview.src = originalPreviewUrl;
+                        processedPreview.src = originalPreviewUrl;
+                        processedLabel.textContent = 'ผลลัพธ์เมื่อเก็บพื้นหลังเดิม';
+                    }
+                    preview.style.display = '';
+                    comparison.hidden = false;
+                } catch (error) {
+                    alert(error?.message || 'ไม่สามารถแสดงตัวอย่างรูปได้');
+                    this.value = '';
+                    comparison.hidden = true;
+                }
+            });
+
+            document.getElementById('signatureRemoveBackground')?.addEventListener('change', function () {
+                const fileInput = document.getElementById('signatureReplacementFile');
+                if (fileInput?.files?.length) fileInput.dispatchEvent(new Event('change'));
+            });
+
+            modal.addEventListener('shown.bs.modal', function () {
+                strokes.length = 0;
+                document.getElementById('signaturePointerStatus').textContent = 'พร้อมเซ็น';
+                resizeCanvas();
+            });
+            modal.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('signatureBackgroundPreview').hidden = true;
+                if (originalPreviewUrl) {
+                    URL.revokeObjectURL(originalPreviewUrl);
+                    originalPreviewUrl = null;
+                }
+            });
+            window.addEventListener('resize', function () {
+                if (modal.classList.contains('show')) resizeCanvas();
+            });
+        })();
+    </script>
+
+    @if ((TempData["StatusModal"] as string) is "signature-replaced" or "signature-captured" or "signature-deleted" or "signature-error")
+    {
+        var signatureStatus = TempData["StatusModal"] as string;
+        var succeeded = signatureStatus != "signature-error";
+        var deleted = signatureStatus == "signature-deleted";
+        var captured = signatureStatus == "signature-captured";
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: '@(succeeded ? "success" : "danger")',
+                    subtitle: 'Signature management',
+                    state: '@(succeeded ? "Completed" : "Failed")',
+                    stateDescription: '@(deleted ? "ลบลายเซ็นสำเร็จ" : captured ? "บันทึกลายเซ็นสำเร็จ" : succeeded ? "อัปเดตลายเซ็นสำเร็จ" : "ดำเนินการไม่สำเร็จ")',
+                    message: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        succeeded
+                            ? deleted ? "ระบบลบรายการลายเซ็นออกจากฐานข้อมูลแล้ว" : captured ? "ระบบบันทึกลายเซ็นจากปากกาเป็นไฟล์ PNG แล้ว" : "ระบบอัปโหลดลายเซ็นใหม่ทับรายการเดิมแล้ว"
+                            : TempData["SignatureError"] as string ?? "กรุณาตรวจสอบไฟล์")),
+                    actionText: 'ปิด'
                 });
             });
         </script>

@@ -37,7 +37,10 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="ClinicName" class="form-label"></label>
-                            <input asp-for="ClinicName" class="form-control" id="clinicNameDisplay" readonly />
+                            <input asp-for="ClinicName"
+                                   class="form-control"
+                                   id="clinicNameDisplay"
+                                   readonly="@(!Model.IsEditMode ? "readonly" : null)" />
                             <span asp-validation-for="ClinicName" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -60,6 +63,12 @@
                             <label asp-for="Address" class="form-label"></label>
                             <textarea asp-for="Address" class="form-control" rows="3" id="clinicAddressDisplay" readonly="@(!Model.IsEditMode ? "readonly" : null)"></textarea>
                             <span asp-validation-for="Address" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="OpeningHours" class="form-label"></label>
+                            <input asp-for="OpeningHours" class="form-control" placeholder="เช่น จ.-ศ. 17.00-21.00 น. และ ส.-อา. 07.30-21.00 น." />
+                            <div class="form-text">ข้อความนี้จะแสดงบริเวณท้ายฉลากยา</div>
+                            <span asp-validation-for="OpeningHours" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Theme" class="form-label"></label>
@@ -84,7 +93,17 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Logo" class="form-label"></label>
-                            <input asp-for="Logo" type="file" class="form-control" />
+                            <input asp-for="Logo"
+                                   type="file"
+                                   class="form-control"
+                                   accept="image/jpeg,image/png,image/webp"
+                                   data-logo-input />
+                            <div class="form-text">รองรับ JPG, PNG และ WEBP ขนาดไม่เกิน 5 MB</div>
+                            <img src="@Model.CurrentLogoPath"
+                                 alt="ตัวอย่างโลโก้คลินิก"
+                                 class="rounded border bg-white p-2 mt-2 @(string.IsNullOrWhiteSpace(Model.CurrentLogoPath) ? "d-none" : string.Empty)"
+                                 style="width:96px;height:96px;object-fit:contain;"
+                                 data-current-logo />
                             @if (!string.IsNullOrWhiteSpace(Model.CurrentLogoPath))
                             {
                                 <div class="form-text">
@@ -162,6 +181,17 @@
             bootstrap.Modal.getOrCreateInstance(document.getElementById('clinicLogoPreviewModal')).show();
         });
 
+        document.querySelector('[data-logo-input]')?.addEventListener('change', function () {
+            const preview = document.querySelector('[data-current-logo]');
+            const file = this.files && this.files[0];
+            if (!preview || !file) {
+                return;
+            }
+
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove('d-none');
+        });
+
         @if ((TempData["ClinicStatus"] as string) == "updated")
         {
             <text>
@@ -177,6 +207,21 @@
                     items: [
                         { title: 'ข้อมูลคลินิก', detail: 'อัปเดตข้อมูลติดต่อ ธีม หรือโลโก้แล้ว', time: 'Done' }
                     ]
+                });
+            });
+            </text>
+        }
+        @if (ViewData["ClinicError"] is string clinicError)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'danger',
+                    subtitle: 'Clinic logo',
+                    state: 'บันทึกไม่สำเร็จ',
+                    stateDescription: 'ระบบไม่สามารถบันทึกโลโก้ได้',
+                    message: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(clinicError)),
+                    actionText: 'ตกลง'
                 });
             });
             </text>

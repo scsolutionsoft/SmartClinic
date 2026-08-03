@@ -1,0 +1,78 @@
+@model PublicSignupViewModel
+@{
+    ViewData["Title"] = "สมัครใช้งาน SmartClinic";
+    var heroMedia = Model.PromotionalMedia.FirstOrDefault(x => x.Placement == "Hero");
+    var featureMedia = Model.PromotionalMedia.FirstOrDefault(x => x.Placement == "Feature");
+    var boardMedia = Model.PromotionalMedia.Where(x => x.Placement == "Board").Take(3).ToList();
+}
+<div class="signup-page">
+    <section class="signup-hero">
+        @if(heroMedia is null){<img src="~/img/smartclinic-signup-hero.png" alt="ระบบจัดการคลินิกดิจิทัล SmartClinic" />}
+        else { <div class="signup-hero-media"><partial name="_PromotionalMedia" model="heroMedia" /></div> }
+        <div class="signup-hero-copy">
+            <span class="signup-pill">SMARTER CLINIC · BETTER CARE</span>
+            <h1>จัดการคลินิกให้เป็นระบบ<br /><em>เริ่มใช้งานได้ทันที</em></h1>
+            <p>เวชระเบียน ผู้ป่วย OPD การทำแผล รายงาน และทีมงาน อยู่ในพื้นที่ทำงานเดียวที่ออกแบบมาให้อ่านง่ายและปลอดภัย</p>
+            <div class="signup-actions"><a href="#signup-form" class="btn btn-primary btn-lg">สมัครฟรี 30 รายการ OPD</a><a asp-controller="Account" asp-action="Login" class="btn btn-light btn-lg">เข้าสู่ระบบ</a></div>
+            <div class="hero-trust"><span>✓ เปิดบัญชีอัตโนมัติ</span><span>✓ ใช้งานครบทุกฟังก์ชัน</span><span>✓ รองรับแผน Unlimited</span></div>
+        </div>
+    </section>
+
+    <section class="product-film-section">
+        <div class="product-film-copy"><span class="section-kicker">PRODUCT FILM</span><h2>เห็นภาพการทำงาน<br/>ครบในเวลาไม่กี่วินาที</h2><p>ตั้งแต่ลงทะเบียนผู้ป่วย เวชระเบียน OPD ไปจนถึงรายงานและการเติบโตแบบ Unlimited</p><a href="#signup-form" class="btn btn-primary">เริ่มต้นใช้งาน</a></div>
+        <div class="product-film-player">
+            @if(featureMedia is not null){<partial name="_PromotionalMedia" model="featureMedia" />}
+            else {<div class="film-placeholder"><img src="~/img/smartclinic-signup-hero.png" alt="ตัวอย่างระบบ SmartClinic"/><span>วิดีโอแนะนำ SmartClinic</span></div>}
+        </div>
+    </section>
+
+    <section class="feature-ribbon" aria-label="จุดเด่น SmartClinic">
+        <article><span class="feature-icon">01</span><div><strong>ข้อมูลผู้ป่วยครบถ้วน</strong><small>รวมประวัติ การรักษา และเอกสาร</small></div></article>
+        <article><span class="feature-icon">02</span><div><strong>ลดงานซ้ำของทีม</strong><small>ค้นหาและติดตามงานได้รวดเร็ว</small></div></article>
+        <article><span class="feature-icon">03</span><div><strong>เริ่มต้น 30 รายการ OPD</strong><small>ติดต่อเติมเครดิตหรือเลือก Unlimited ได้</small></div></article>
+        <article><span class="feature-icon">04</span><div><strong>แยกข้อมูลแต่ละคลินิก</strong><small>ควบคุมสิทธิ์ตามบทบาทผู้ใช้งาน</small></div></article>
+    </section>
+
+    <div class="signup-content-grid">
+        <section class="signup-form-card" id="signup-form">
+            <div class="section-kicker">เริ่มต้นใช้งาน</div>
+            <h2>สร้างพื้นที่ทำงานสำหรับคลินิก</h2>
+            <p class="text-body-secondary">กรอกข้อมูลครั้งเดียว ระบบจะสร้าง Username และรหัสผ่านชั่วคราวให้ทันที</p>
+            <form asp-action="Register" method="post" class="row g-3 mt-2">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="col-md-6"><label asp-for="ClinicCode" class="form-label"></label><input asp-for="ClinicCode" class="form-control" placeholder="เช่น AB12CD34EF" autocomplete="organization" /><span asp-validation-for="ClinicCode" class="text-danger"></span></div>
+                <div class="col-md-6"><label asp-for="ClinicName" class="form-label"></label><input asp-for="ClinicName" class="form-control" placeholder="ชื่อสถานพยาบาลหรือคลินิก" /><span asp-validation-for="ClinicName" class="text-danger"></span></div>
+                <div class="col-md-6"><label asp-for="FullName" class="form-label"></label><input asp-for="FullName" class="form-control" autocomplete="name" /><span asp-validation-for="FullName" class="text-danger"></span></div>
+                <div class="col-md-6"><label asp-for="PhoneNumber" class="form-label"></label><input asp-for="PhoneNumber" class="form-control" inputmode="tel" autocomplete="tel" /><span asp-validation-for="PhoneNumber" class="text-danger"></span></div>
+                <div class="col-12"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" autocomplete="email" /><span asp-validation-for="Email" class="text-danger"></span></div>
+                <div class="col-12"><label asp-for="Address" class="form-label"></label><textarea asp-for="Address" class="form-control" rows="3"></textarea><span asp-validation-for="Address" class="text-danger"></span></div>
+                <div class="col-12"><div class="form-check signup-consent"><input asp-for="AcceptTerms" class="form-check-input" /><label asp-for="AcceptTerms" class="form-check-label">ยอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัว</label></div><span asp-validation-for="AcceptTerms" class="text-danger"></span></div>
+                <div class="col-12"><button class="btn btn-primary btn-lg w-100" type="submit">สมัครและสร้างบัญชีอัตโนมัติ <span>→</span></button></div>
+            </form>
+            <div class="signup-contact">ต้องการคำแนะนำหรือแผน Unlimited? <a href="tel:0887776775">โทร 088-777-6775</a></div>
+        </section>
+
+        <aside class="news-board">
+            <div class="section-kicker">SMARTCLINIC UPDATE</div>
+            <div class="news-heading"><h2>ข่าวสารและประกาศ</h2><span>อัปเดตล่าสุด</span></div>
+            @if (Model.Announcements.Count == 0)
+            {
+                <article class="news-featured"><span>แนะนำ</span><h3>เปิดใช้งาน SmartClinic พร้อมเครดิตเริ่มต้น 30 รายการ OPD</h3><p>จัดการข้อมูลผู้ป่วยได้ตามปกติ โดยเครดิตจะถูกใช้เมื่อสร้างเวชระเบียน OPD ใหม่ และติดต่อเติมเครดิตได้ทุกเมื่อ</p></article>
+                <article class="news-item"><time>สิทธิพิเศษ</time><div><h3>สมัครวันนี้ สร้างบัญชีอัตโนมัติ</h3><p>รับ Username และรหัสผ่านชั่วคราวทันทีหลังสมัครสำเร็จ</p></div></article>
+                <article class="news-item"><time>ช่วยเหลือ</time><div><h3>ทีมงานพร้อมดูแลการเริ่มต้นใช้งาน</h3><p>ติดต่อ 088-777-6775 เพื่อขอคำแนะนำหรือเติมเครดิต</p></div></article>
+            }
+            else
+            {
+                @foreach (var item in Model.Announcements)
+                {
+                    <article class="news-item"><time>@item.BadgeText</time><div><h3>@item.Title</h3><p>@item.Summary</p>@if (!string.IsNullOrWhiteSpace(item.LinkUrl)){<a href="@item.LinkUrl">อ่านเพิ่มเติม →</a>}</div></article>
+                }
+            }
+            <div class="unlimited-ad"><div class="infinity-mark">∞</div><div><small>SMARTCLINIC UNLIMITED</small><strong>บันทึกเวชระเบียน OPD ได้ไม่จำกัด</strong><p>เหมาะสำหรับคลินิกที่มีรายการตรวจรักษาต่อเนื่อง</p></div><a href="tel:0887776775">สอบถามแผน</a></div>
+            @foreach(var media in boardMedia){<article class="board-video"><div><span>@media.MediaType</span><h3>@media.Title</h3><p>@media.Description</p></div><partial name="_PromotionalMedia" model="media" /></article>}
+        </aside>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/promotional-media.js" asp-append-version="true"></script> }

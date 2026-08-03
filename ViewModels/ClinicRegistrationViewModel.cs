@@ -9,6 +9,9 @@ public class ClinicRegistrationViewModel
     [Display(Name = "คลินิกจากระบบ สปสช.")]
     public string SelectedClinicCode { get; set; } = string.Empty;
 
+    [Required]
+    [StringLength(200)]
+    [Display(Name = "ชื่อคลินิก")]
     public string ClinicName { get; set; } = string.Empty;
 
     [Display(Name = "โลโก้คลินิก")]
@@ -23,7 +26,15 @@ public class ClinicRegistrationViewModel
     [Display(Name = "เบอร์โทรผู้ลงทะเบียน")]
     public string PhoneNumber { get; set; } = string.Empty;
 
+    [Required]
+    [StringLength(500)]
+    [Display(Name = "ที่อยู่คลินิก")]
     public string Address { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(500)]
+    [Display(Name = "เวลาทำการคลินิก")]
+    public string OpeningHours { get; set; } = "จ.-ศ. 17.00-21.00 น. และ ส.-อา. 07.30-21.00 น.";
 
     [Required]
     [EmailAddress]

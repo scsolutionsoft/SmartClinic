@@ -4,6 +4,8 @@ namespace SmartClinic.Web.Controllers;
 
 public class DownloadsController : Controller
 {
+    private const string BridgePackageFileName = "SmartClinic-CardReader-Bridge-v1.0.4.zip";
+
     public IActionResult Index()
     {
         return View();
@@ -39,9 +41,15 @@ public class DownloadsController : Controller
         return PhysicalFile(Path.Combine(Directory.GetCurrentDirectory(), "PRODUCT_INFO.md"), "text/markdown", "PRODUCT_INFO.md");
     }
 
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public IActionResult BridgePackage()
     {
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "downloads", "SmartClinic-CardReader-Bridge-v1.0.0-fixed.zip");
-        return PhysicalFile(path, "application/zip", "SmartClinic-CardReader-Bridge-v1.0.0-fixed.zip");
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "downloads", BridgePackageFileName);
+        if (!System.IO.File.Exists(path))
+        {
+            return NotFound("ไม่พบไฟล์ติดตั้ง Smart Card Bridge");
+        }
+
+        return PhysicalFile(path, "application/zip", BridgePackageFileName, enableRangeProcessing: true);
     }
 }

@@ -9,13 +9,16 @@
         return digits.Length > 0 ? $"* {string.Join(" ", digits.Select(x => x.ToString()))} *" : "* *";
     }
     var hasPdf = Model.SourcePdfData is { Length: > 0 };
-    var logoUrl = ViewBag.LogoUrl as string;
+    var clinicLogoUrl = ViewBag.LogoUrl as string;
+    var serviceLogoUrl = Url.Content("~/img/community-clinic-logo.svg");
     var patientPhotoUrl = ViewBag.PatientPhotoUrl as string;
     var patientSignatureUrl = ViewBag.PatientSignatureUrl as string;
     var providerSignatureUrl = ViewBag.ProviderSignatureUrl as string;
     var providerName = ViewBag.ProviderName as string;
     var providerTitle = ViewBag.ProviderTitle as string;
 }
+
+<link rel="stylesheet" href="~/css/patient-profile-report.css" asp-append-version="true" />
 
 <div class="d-print-none d-flex justify-content-between align-items-center mb-3">
     <a class="btn btn-outline-secondary" asp-action="Index">กลับ</a>
@@ -29,39 +32,45 @@
 </div>
 
 <section class="profile-report-sheet">
-    <div class="profile-form-top">
-        <div>
-            <div>เลขประจำตัวผู้รับบริการ</div>
-            <div class="profile-form-small-box">@Display(Model.ServiceRecipientId)</div>
+    <header class="profile-form-header">
+        <div class="profile-form-brand profile-form-brand-clinic">
+            <img src="@clinicLogoUrl" alt="โลโก้ @Display(Model.ClinicName)" />
+            <small>สถานพยาบาล</small>
         </div>
-        <div>
-            <div>วันที่ให้ข้อมูล</div>
-            <div class="profile-form-date">@DateText(Model.InformationGivenDate)</div>
+        <div class="profile-form-title">
+            <span>MEDICAL RECORD</span>
+            <h1>เวชระเบียนผู้รับบริการ</h1>
+            <div class="clinic-name">@Display(Model.ClinicName)</div>
+            <div class="clinic-address">@Display(Model.ClinicAddress)</div>
         </div>
+        <div class="profile-form-brand profile-form-brand-service">
+            <img src="@serviceLogoUrl" alt="โลโก้หน่วยบริการ" />
+            <small>ระบบบริการสุขภาพ</small>
+        </div>
+    </header>
+
+    <div class="profile-form-meta">
+        <div><span>เลขประจำตัวผู้รับบริการ</span><strong>@Display(Model.ServiceRecipientId)</strong></div>
+        <div><span>วันที่ให้ข้อมูล</span><strong>@DateText(Model.InformationGivenDate)</strong></div>
     </div>
 
-    <div class="profile-form-patient-photo">
-        <img src="@patientPhotoUrl" alt="รูปผู้ป่วย" />
-    </div>
-
-    <div class="profile-form-title">
-        <img src="@logoUrl" alt="โลโก้คลินิก" class="profile-form-logo" />
-        <h1>เวชระเบียนผู้รับบริการ</h1>
-        <div class="clinic-name">@Display(Model.ClinicName)</div>
-        <div>@Display(Model.ClinicAddress)</div>
-    </div>
-
-    <div class="profile-form-section">
+    <div class="profile-form-section profile-form-patient-section">
         <h2>ข้อมูลและประวัติผู้รับบริการ (Patient Profile)</h2>
-        <div class="profile-form-grid">
-            <div><span>ชื่อ-สกุล</span> <strong>@Display(Model.PatientName)</strong></div>
-            <div><span>เพศ</span> <strong>@Display(Model.Gender)</strong></div>
-            <div><span>วัน/เดือน/ปีเกิด</span> <strong>@DateText(Model.BirthDate)</strong></div>
-            <div><span>เลขบัตรประชาชน</span> <strong>@Display(Model.CitizenId)</strong></div>
-            <div><span>เชื้อชาติ</span> <strong>@Display(Model.Race)</strong></div>
-            <div><span>สัญชาติ</span> <strong>@Display(Model.Nationality)</strong></div>
-            <div><span>สถานภาพ</span> <strong>@Display(Model.MaritalStatus)</strong></div>
-            <div><span>เบอร์โทรศัพท์</span> <strong>@Display(Model.PhoneNumber)</strong></div>
+        <div class="profile-form-patient-layout">
+            <div class="profile-form-grid">
+                <div><span>ชื่อ-สกุล</span> <strong>@Display(Model.PatientName)</strong></div>
+                <div><span>เพศ</span> <strong>@Display(Model.Gender)</strong></div>
+                <div><span>วัน/เดือน/ปีเกิด</span> <strong>@DateText(Model.BirthDate)</strong></div>
+                <div><span>เลขบัตรประชาชน</span> <strong>@Display(Model.CitizenId)</strong></div>
+                <div><span>เชื้อชาติ</span> <strong>@Display(Model.Race)</strong></div>
+                <div><span>สัญชาติ</span> <strong>@Display(Model.Nationality)</strong></div>
+                <div><span>สถานภาพ</span> <strong>@Display(Model.MaritalStatus)</strong></div>
+                <div><span>เบอร์โทรศัพท์</span> <strong>@Display(Model.PhoneNumber)</strong></div>
+            </div>
+            <div class="profile-form-patient-photo">
+                <img src="@patientPhotoUrl" alt="รูปผู้ป่วย" />
+                <small>รูปผู้รับบริการ</small>
+            </div>
         </div>
     </div>
 
@@ -96,8 +105,8 @@
                 <img class="profile-form-signature-img" src="@patientSignatureUrl" alt="ลายมือชื่อผู้รับบริการ" />
             }
             <div class="line"></div>
-            <div>ลายมือชื่อผู้รับบริการ</div>
-            <div>( @Display(Model.PatientName) )</div>
+            <div class="profile-form-signature-caption">ลายมือชื่อผู้รับบริการ</div>
+            <div class="profile-form-signature-name">( @Display(Model.PatientName) )</div>
         </div>
         <div class="signature-line">
             @if (!string.IsNullOrWhiteSpace(providerSignatureUrl))
@@ -105,8 +114,8 @@
                 <img class="profile-form-signature-img" src="@providerSignatureUrl" alt="ลายมือชื่อผู้ให้บริการ" />
             }
             <div class="line"></div>
-            <div>ลายมือชื่อพยาบาลผู้ให้บริการ</div>
-            <div>( @Display(providerName) )</div>
+            <div class="profile-form-signature-caption">ลายมือชื่อพยาบาลผู้ให้บริการ</div>
+            <div class="profile-form-signature-name">( @Display(providerName) )</div>
             <div class="profile-form-provider-title">@Display(providerTitle)</div>
         </div>
     </div>

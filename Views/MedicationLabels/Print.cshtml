@@ -1,0 +1,101 @@
+@model MedicationLabelPrintViewModel
+@{
+    Layout = null;
+    var activeEnd = Math.Min(8, Model.StartPosition + Model.Quantity - 1);
+    var opdMode = string.Equals(Model.PrintMode, "opd", StringComparison.OrdinalIgnoreCase);
+    MedicationLabelSlotViewModel? SlotAt(int position) => Model.AssignedSlots.FirstOrDefault(x => x.Position == position);
+    string TextOrBlank(string? value) => Model.BlankMode ? string.Empty : value?.Trim() ?? string.Empty;
+    string Mark(bool value) => !Model.BlankMode && value ? "✓" : string.Empty;
+}
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>พิมพ์ฉลากยา A15</title>
+<style>
+@@page { size: 175mm 212mm; margin: 0; }
+:root { --teal:#078fa4; --teal-dark:#08788b; --ink:#173b47; --muted:#55727a; --line:#82b9c2; --soft:#edf7f8; }
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; background:#dfe3e4; font-family:Tahoma,"Noto Sans Thai",sans-serif; }
+.toolbar { position:fixed; z-index:10; top:12px; right:12px; padding:10px; border-radius:10px; background:#fff; box-shadow:0 4px 18px #0003; }
+.toolbar button,.toolbar a { display:inline-block; border:0; border-radius:7px; padding:9px 14px; color:#fff; background:var(--teal); text-decoration:none; font:14px Tahoma; cursor:pointer; }
+.toolbar a { background:#50636a; }.toolbar small { display:block; margin-top:7px; color:#4b6269; }
+.sheet { position:relative; width:175mm; height:212mm; margin:15px auto; overflow:hidden; background:#fff; }
+.grid { position:absolute; left:calc(6mm + @Model.OffsetXMillimeters.ToString(System.Globalization.CultureInfo.InvariantCulture)mm); top:calc(1mm + @Model.OffsetYMillimeters.ToString(System.Globalization.CultureInfo.InvariantCulture)mm); display:grid; grid-template-columns:80mm 80mm; grid-template-rows:repeat(4,50mm); gap:3mm; }
+.drug-label,.drug-label * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important; }
+.drug-label { width:80mm; height:50mm; overflow:hidden; border:.2mm solid var(--teal); border-radius:1.5mm; background:#fff; color:var(--ink); font-size:2.42mm; line-height:1.15; }
+.drug-label.unused { visibility:hidden; }
+.label-head { height:7mm; padding:1.05mm 2.2mm .55mm; color:#fff!important; background:var(--teal)!important; box-shadow:inset 0 0 0 20mm var(--teal); }
+.head-row { display:flex; align-items:center; justify-content:space-between; gap:1mm; }
+.clinic-name { min-width:0; overflow:hidden; color:#fff!important; font-size:3.05mm; font-weight:700; white-space:nowrap; text-overflow:ellipsis; }
+.label-badge { flex:0 0 auto; padding:.35mm 1.4mm; border-radius:3mm; background:#fff!important; color:var(--teal-dark)!important; font-size:1.65mm; font-weight:700; }
+.clinic-meta { margin-top:.45mm; overflow:hidden; color:#fff!important; opacity:.96; font-size:1.55mm; white-space:nowrap; text-overflow:ellipsis; }
+.label-body { height:39mm; padding:1.3mm 2.3mm 0; }
+.field-row { display:flex; align-items:flex-end; gap:1mm; min-width:0; height:4.7mm; white-space:nowrap; }
+.field-name { flex:0 0 auto; color:#385761; }
+.fill { display:block; min-width:0; height:3.5mm; border-bottom:.22mm dotted var(--line); color:var(--ink); font-weight:700; line-height:3.2mm; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.fill.grow { flex:1 1 auto; }.fill.patient { flex:1 1 auto; }.fill.date { flex:0 0 19mm; }.date-label { margin-left:1mm; }
+.medicine-box { height:9.2mm; margin:.5mm -.8mm .7mm; padding:.8mm 1.1mm; border-radius:1.4mm; background:var(--soft)!important; }
+.medicine-caption { display:block; color:#42626b; font-size:1.75mm; }
+.medicine-value { display:block; height:5mm; padding-top:.45mm; border-bottom:.22mm dotted var(--line); color:var(--ink); font-size:3.05mm; font-weight:700; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.dose-row { display:flex; align-items:flex-end; gap:.8mm; height:4.8mm; white-space:nowrap; }
+.dose-row .fill { flex:1 1 8mm; }.dose-row .meal { margin-left:.8mm; }
+.choice-row { display:flex; align-items:center; gap:2.2mm; height:4.4mm; white-space:nowrap; }
+.choice { display:inline-flex; align-items:center; gap:.55mm; color:#294952; }
+.circle { display:inline-grid; place-items:center; width:2.75mm; height:2.75mm; border:.28mm solid var(--teal); border-radius:50%; color:var(--teal)!important; font-size:2.3mm; font-weight:700; line-height:1; }
+.interval-line { display:inline-block; min-width:8mm; height:3mm; border-bottom:.22mm dotted var(--line); color:var(--ink); font-weight:700; text-align:center; }
+.advice { margin-top:.2mm; padding-top:.65mm; border-top:.16mm solid #d9e8ea; }
+.advice-title { height:3mm; color:#31535c; font-size:1.85mm; font-weight:700; }
+.advice-row { display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:1mm; height:3.7mm; font-size:1.75mm; }
+.advice-row .choice { gap:.4mm; }.advice-row .circle { width:2.35mm; height:2.35mm; font-size:1.9mm; }
+.extra-advice { height:3.1mm; overflow:hidden; color:#173b47; font-size:1.7mm; font-weight:700; white-space:nowrap; text-overflow:ellipsis; }
+.label-foot { height:4mm; padding:.85mm 1mm; overflow:hidden; color:#315963!important; background:var(--soft)!important; font-size:1.75mm; font-weight:700; text-align:center; white-space:nowrap; text-overflow:ellipsis; }
+@@media print { html,body { background:#fff; }.toolbar { display:none; }.sheet { margin:0; }.drug-label { border-color:#078fa4!important; }.label-head { background:#078fa4!important; color:#fff!important; } }
+</style>
+</head>
+<body>
+<div class="toolbar"><a href="javascript:window.close()">กลับ</a> <button onclick="window.print()">พิมพ์ขนาดจริง 100%</button><small>เปิด Background graphics เพื่อให้ได้สีตามตัวอย่าง</small></div>
+<main class="sheet"><div class="grid">
+@for (var position = 1; position <= 8; position++)
+{
+    var slot = SlotAt(position);
+    if ((opdMode && slot is null) || (!opdMode && (position < Model.StartPosition || position > activeEnd)))
+    {
+        <div class="drug-label unused"></div>
+        continue;
+    }
+    var patient = TextOrBlank(Model.PatientName);
+    var medicine = TextOrBlank(slot?.MedicineName ?? Model.MedicineName);
+    var dose = TextOrBlank(slot?.DoseAmount ?? Model.DoseAmount);
+    var frequency = TextOrBlank(slot?.FrequencyPerDay ?? Model.FrequencyPerDay);
+    var mealTiming = slot?.MealTiming ?? Model.MealTiming;
+    var morning = slot?.Morning ?? Model.Morning;
+    var noon = slot?.Noon ?? Model.Noon;
+    var evening = slot?.Evening ?? Model.Evening;
+    var bedtime = slot?.Bedtime ?? Model.Bedtime;
+    var interval = TextOrBlank(slot?.IntervalHours ?? Model.IntervalHours);
+    var finishCourse = slot?.FinishCourse ?? Model.FinishCourse;
+    var mayCauseDrowsiness = slot?.MayCauseDrowsiness ?? Model.MayCauseDrowsiness;
+    var beforeMeal30Minutes = slot?.BeforeMeal30Minutes ?? Model.BeforeMeal30Minutes;
+    var immediatelyAfterMeal = slot?.ImmediatelyAfterMeal ?? Model.ImmediatelyAfterMeal;
+    var additionalAdvice = TextOrBlank(slot?.AdditionalAdvice ?? Model.AdditionalAdvice);
+    var date = !Model.BlankMode && Model.LabelDate.HasValue ? Model.LabelDate.Value.ToString("dd/MM/yyyy") : string.Empty;
+    <article class="drug-label">
+        <header class="label-head">
+            <div class="head-row"><strong class="clinic-name">@Model.ClinicName</strong><span class="label-badge">ฉลากยา</span></div>
+            <div class="clinic-meta">@Model.ClinicAddress · โทร @Model.ClinicPhone</div>
+        </header>
+        <div class="label-body">
+            <div class="field-row"><span class="field-name">ชื่อผู้ป่วย</span><span class="fill patient">@patient</span><span class="field-name date-label">วันที่</span><span class="fill date">@date</span></div>
+            <div class="medicine-box"><span class="medicine-caption">ชื่อยา / สรรพคุณ</span><span class="medicine-value">@medicine</span></div>
+            <div class="dose-row"><span>รับประทานครั้งละ</span><span class="fill">@dose</span><span>วันละ</span><span class="fill">@frequency</span><span>ครั้ง</span><span class="choice meal"><i class="circle">@Mark(mealTiming == "ก่อนอาหาร")</i>ก่อน</span><span class="choice"><i class="circle">@Mark(mealTiming == "หลังอาหาร")</i>หลัง</span></div>
+            <div class="choice-row"><span class="choice"><i class="circle">@Mark(morning)</i>เช้า</span><span class="choice"><i class="circle">@Mark(noon)</i>เที่ยง</span><span class="choice"><i class="circle">@Mark(evening)</i>เย็น</span><span class="choice"><i class="circle">@Mark(bedtime)</i>ก่อนนอน</span><span class="choice"><i class="circle"></i>ทุก <b class="interval-line">@interval</b> ชั่วโมง</span></div>
+            <div class="advice"><div class="advice-title">คำแนะนำ</div><div class="advice-row"><span class="choice"><i class="circle">@Mark(finishCourse)</i>กินติดต่อกันจนหมด</span><span class="choice"><i class="circle">@Mark(mayCauseDrowsiness)</i>อาจทำให้ง่วงซึม</span><span class="choice"><i class="circle">@Mark(beforeMeal30Minutes)</i>ก่อนอาหาร 30 นาที</span></div><div class="extra-advice">@additionalAdvice @if (!Model.BlankMode && immediatelyAfterMeal) { <text>· กินหลังอาหารทันที</text> }</div></div>
+        </div>
+        <footer class="label-foot">@Model.OpeningHours</footer>
+    </article>
+}
+</div></main>
+</body>
+</html>

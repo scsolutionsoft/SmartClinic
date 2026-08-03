@@ -1,0 +1,19 @@
+@model PromotionalMedia
+@{
+    var isYouTube = Model.MediaType == "YouTube";
+    var youtubeId = isYouTube ? Model.MediaUrl.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() : null;
+    var source = Model.MediaUrl + (isYouTube ? $"?autoplay={(Model.AutoPlay ? 1 : 0)}&mute=1&loop={(Model.Loop ? 1 : 0)}&playlist={youtubeId}&controls=1&rel=0&playsinline=1" : string.Empty);
+}
+<div class="promo-media-frame" data-promo-media data-autoplay="@Model.AutoPlay.ToString().ToLowerInvariant()">
+    @if (isYouTube)
+    {
+        <iframe src="@source" title="@Model.Title" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    }
+    else
+    {
+        <video muted="@Model.AutoPlay" autoplay="@Model.AutoPlay" loop="@Model.Loop" playsinline preload="metadata" poster="@Model.PosterUrl" controls="@(!Model.AutoPlay)">
+            <source src="@Model.MediaUrl" type="@(Model.MediaUrl.EndsWith(".webm", StringComparison.OrdinalIgnoreCase) ? "video/webm" : "video/mp4")" />
+        </video>
+        @if (Model.AutoPlay){<button type="button" class="promo-sound-toggle" aria-label="เปิดหรือปิดเสียง">เปิดเสียง</button>}
+    }
+</div>

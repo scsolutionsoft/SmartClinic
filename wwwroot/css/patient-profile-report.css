@@ -1,0 +1,285 @@
+.profile-report-sheet {
+  --profile-ink: #17324d;
+  --profile-teal: #0796a8;
+  --profile-pale: #eaf7f8;
+  --profile-line: #cfdee5;
+  color: var(--profile-ink);
+  padding: 11mm 12mm 8mm;
+  font-size: 13.5px;
+  line-height: 1.42;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.profile-form-header {
+  display: grid;
+  grid-template-columns: 30mm minmax(0, 1fr) 30mm;
+  align-items: center;
+  gap: 6mm;
+  min-height: 31mm;
+  padding-bottom: 4mm;
+  border-bottom: 1.5px solid var(--profile-teal);
+}
+
+.profile-form-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  color: #527083;
+  text-align: center;
+}
+
+.profile-form-brand img {
+  display: block;
+  width: 22mm;
+  height: 20mm;
+  object-fit: contain;
+}
+
+.profile-form-brand small {
+  margin-top: 1mm;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.profile-form-title {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.profile-form-title > span {
+  display: block;
+  margin-bottom: 1mm;
+  color: var(--profile-teal);
+  font-family: Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.profile-form-title h1 {
+  margin: 0 0 1mm;
+  color: var(--profile-ink);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.profile-form-title .clinic-name {
+  color: var(--profile-ink);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.profile-form-title .clinic-address {
+  margin-top: .7mm;
+  color: #5d7181;
+  font-size: 10px;
+}
+
+.profile-form-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  margin: 3mm 0;
+  padding: 2mm 3mm;
+  border: 1px solid #d9e7ec;
+  border-radius: 2mm;
+  background: #f7fbfc;
+}
+
+.profile-form-meta div { display: flex; align-items: baseline; gap: 2mm; }
+.profile-form-meta span { color: #667b89; font-size: 11px; }
+.profile-form-meta strong { color: var(--profile-ink); font-size: 12px; }
+
+.profile-form-section {
+  overflow: hidden;
+  margin-top: 3mm;
+  padding: 0 3mm 2.5mm;
+  border: 1px solid #dce8ed;
+  border-radius: 2.5mm;
+}
+
+.profile-form-section h2 {
+  margin: 0 -3mm 2.5mm;
+  padding: 2mm 3mm 1.6mm;
+  background: var(--profile-pale);
+  color: var(--profile-ink);
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.profile-form-section p {
+  margin: 0;
+  padding: 1.15mm 0;
+  border-bottom: 1px dotted var(--profile-line);
+  color: #263f54;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.profile-form-section p strong {
+  color: #102a43;
+  font-weight: 750;
+}
+
+.profile-form-section p:last-child { border-bottom: 0; }
+
+.profile-form-patient-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 29mm;
+  gap: 5mm;
+  align-items: stretch;
+}
+
+.profile-form-patient-section h2 {
+  padding-top: 2.7mm;
+  padding-bottom: 2.4mm;
+  font-size: 15.5px;
+  letter-spacing: .01em;
+}
+
+.profile-form-grid { gap: 0 8mm; }
+
+.profile-form-grid > div {
+  display: grid;
+  grid-template-columns: 30mm minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2mm;
+  min-width: 0;
+  min-height: 10mm;
+  padding: 2.25mm 0 1.9mm;
+  border-bottom: 1px dotted var(--profile-line);
+}
+
+.profile-form-patient-section .profile-form-grid span {
+  color: #526b7c;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.profile-form-patient-section .profile-form-grid strong {
+  min-width: 0;
+  color: #102a43;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.profile-form-patient-photo {
+  position: static;
+  width: 29mm;
+  height: auto;
+  min-height: 38mm;
+  padding: 1.2mm;
+  border: 1px solid #9fb1bc;
+  border-radius: 1.5mm;
+  background: #fff;
+  text-align: center;
+}
+
+.profile-form-patient-photo img {
+  width: 100%;
+  height: 34mm;
+  border-radius: 1mm;
+  object-fit: cover;
+}
+
+.profile-form-patient-photo small {
+  display: block;
+  margin-top: .6mm;
+  color: #718490;
+  font-size: 9px;
+}
+
+.profile-form-signatures {
+  gap: 14mm;
+  margin-top: 6mm;
+  color: var(--profile-ink);
+  font-family: "Sarabun", "Leelawadee UI", Tahoma, sans-serif;
+  font-size: 11px;
+}
+
+.signature-line {
+  position: relative;
+  display: flex;
+  min-height: 31mm;
+  align-items: center;
+  flex-direction: column;
+  padding-top: 16mm;
+}
+
+.profile-form-signature-img {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: block;
+  width: 52mm;
+  height: 15mm;
+  margin: 0;
+  object-fit: contain;
+  transform: translateX(-50%);
+}
+
+.profile-form-signatures .signature-line:nth-child(2) {
+  min-height: 34mm;
+  padding-top: 19mm;
+}
+
+.profile-form-signatures .signature-line:nth-child(2) .profile-form-signature-img {
+  width: 61mm;
+  height: 18mm;
+  filter: contrast(1.65) saturate(1.35) brightness(.82);
+}
+
+.signature-line .line {
+  width: 100%;
+  height: 0;
+  margin: 0 0 2mm;
+  border-color: #5d7181;
+}
+
+.signature-line > div:not(.line) {
+  color: #40576a;
+  line-height: 1.35;
+}
+
+.profile-form-signature-caption {
+  color: #40576a;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.profile-form-signature-name {
+  margin-top: .7mm;
+  color: var(--profile-ink);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.profile-form-provider-title {
+  margin-top: .5mm;
+  color: #526b7c !important;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.profile-form-barcode { bottom: 2.5mm; color: var(--profile-ink); font-size: 12px; }
+.profile-form-barcode svg { height: 34px; }
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+
+  .profile-report-sheet {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    padding: 11mm 12mm 8mm;
+    overflow: hidden;
+  }
+}

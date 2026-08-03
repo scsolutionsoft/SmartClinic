@@ -3,6 +3,8 @@
     ViewData["Title"] = "รายงานประวัติการรักษา";
 }
 
+<link rel="stylesheet" href="~/css/medical-record-report.css" asp-append-version="true" />
+
 <div class="report-toolbar d-print-none mb-3 d-flex flex-wrap gap-2">
     <a class="btn btn-outline-secondary" asp-controller="MedicalRecords" asp-action="Index">กลับ</a>
     <button type="button" class="btn btn-primary" onclick="window.print()">พิมพ์รายงาน</button>
@@ -20,11 +22,15 @@
         var adviceText = ExtractAdviceText(Model.TreatmentAndAdvice);
     }
 
+    @if (!string.IsNullOrWhiteSpace(Model.ClinicLogoUrl))
+    {
+        <img src="@Model.ClinicLogoUrl"
+             alt="โลโก้คลินิก"
+             class="amed-clinic-logo" />
+    }
+
     <div class="amed-report-header">
         <div class="amed-service-box">เลขประจำตัวผู้รับบริการ&nbsp; <strong>@DisplayValue(Model.ServiceRecipientId)</strong></div>
-        <img src="@(Model.HasPatientPhoto && !string.IsNullOrWhiteSpace(Model.PatientPhotoUrl) ? Model.PatientPhotoUrl : Url.Content("~/img/photo-not-available.svg"))"
-             alt="รูปภาพผู้ป่วย"
-             class="amed-patient-photo" />
         <img src="~/img/community-clinic-logo.svg" alt="คลินิกพยาบาลชุมชนอบอุ่น" class="amed-report-logo" />
         <h1 class="amed-report-title">การรักษาโรคเบื้องต้น</h1>
         <div class="amed-clinic-line">ชื่อคลินิก&nbsp; แปดแยกคลินิกการพยาบาลและการผดุงครรภ์</div>
@@ -36,10 +42,18 @@
         <span>Authentication Code&nbsp; <strong>@DisplayValue(Model.AuthenticationCode)</strong></span>
     </div>
 
-    <div class="amed-patient-line">
-        <span>ชื่อ-สกุล <strong>@Model.PatientName</strong></span>
-        <span>เพศ @RenderCheck(Model.Gender, "ชาย") ชาย @RenderCheck(Model.Gender, "หญิง") หญิง @RenderCheck(Model.Gender, "อื่น") อื่นๆ</span>
-        <span>อายุ <strong>@DisplayValue(Model.AgeText)</strong> ปี</span>
+    <div class="amed-patient-summary">
+        <div class="amed-patient-line">
+            <span>ชื่อ-สกุล <strong>@Model.PatientName</strong></span>
+            <span>เพศ @RenderCheck(Model.Gender, "ชาย") ชาย @RenderCheck(Model.Gender, "หญิง") หญิง @RenderCheck(Model.Gender, "อื่น") อื่นๆ</span>
+            <span>อายุ <strong>@DisplayValue(Model.AgeText)</strong> ปี</span>
+        </div>
+        <div class="amed-patient-photo-frame">
+            <img src="@(Model.HasPatientPhoto && !string.IsNullOrWhiteSpace(Model.PatientPhotoUrl) ? Model.PatientPhotoUrl : Url.Content("~/img/photo-not-available.svg"))"
+                 alt="รูปภาพผู้ป่วย"
+                 class="amed-patient-photo" />
+            <small>รูปผู้รับบริการ</small>
+        </div>
     </div>
 
     <div class="amed-section">
@@ -51,6 +65,19 @@
         <div class="amed-label">ประวัติเจ็บป่วยปัจจุบัน (Present Illness) :</div>
         <div class="amed-value">@DisplayValue(Model.PresentIllness)</div>
     </div>
+
+    @if (Model.TemperatureCelsius.HasValue || Model.PulseRate.HasValue || Model.RespiratoryRate.HasValue || Model.SystolicPressure.HasValue || Model.WeightKilograms.HasValue || Model.HeightCentimeters.HasValue)
+    {
+        <div class="amed-vital-summary">
+            @if (Model.TemperatureCelsius.HasValue) { <span>อุณหภูมิ <strong>@Model.TemperatureCelsius.Value.ToString("0.0")°C</strong></span> }
+            @if (Model.PulseRate.HasValue) { <span>ชีพจร <strong>@Model.PulseRate ครั้ง/นาที</strong></span> }
+            @if (Model.RespiratoryRate.HasValue) { <span>หายใจ <strong>@Model.RespiratoryRate ครั้ง/นาที</strong></span> }
+            @if (Model.SystolicPressure.HasValue && Model.DiastolicPressure.HasValue) { <span>BP <strong>@Model.SystolicPressure / @Model.DiastolicPressure มม.ปรอท</strong></span> }
+            @if (Model.WeightKilograms.HasValue) { <span>น้ำหนัก <strong>@Model.WeightKilograms.Value.ToString("0.##") กก.</strong></span> }
+            @if (Model.HeightCentimeters.HasValue) { <span>ส่วนสูง <strong>@Model.HeightCentimeters.Value.ToString("0.##") ซม.</strong></span> }
+            @if (Model.BodyMassIndex.HasValue) { <span>ดัชนีมวลกาย <strong>@Model.BodyMassIndex.Value.ToString("0.00") กก./ม²</strong></span> }
+        </div>
+    }
 
     <h2 class="amed-heading">การตรวจร่างกาย</h2>
     <div class="amed-block">@DisplayValue(Model.PhysicalExam)</div>
@@ -71,29 +98,57 @@
     <h2 class="amed-heading">สรุปการวินิจฉัยโรค</h2>
     <div class="amed-block">@DisplayValue(Model.Diagnosis)</div>
 
-    <h2 class="amed-heading">การรักษาเบื้องต้นและการให้คำแนะนำ</h2>
+    <h2 class="amed-heading">การรักษาเบื้องต้นและรายการยา</h2>
     @if (medicineItems.Count > 0)
     {
         <div class="amed-medicine-list">
             @foreach (var item in medicineItems)
             {
                 <div class="amed-medicine-item">
-                    <div class="amed-medicine-name">@item.Name</div>
-                    @if (!string.IsNullOrWhiteSpace(item.Usage))
-                    {
-                        <div>การใช้ยา: @item.Usage</div>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(item.Advice))
-                    {
-                        <div>คำแนะนำ: @item.Advice</div>
-                    }
+                    <span class="amed-medicine-index" aria-label="รายการที่ @item.Index">@item.Index</span>
+                    <div class="amed-medicine-content">
+                        <div class="amed-medicine-name">@item.Name</div>
+                        @if (!string.IsNullOrWhiteSpace(item.Usage))
+                        {
+                            <div class="amed-medicine-usage"><span>วิธีใช้</span><p>@item.Usage</p></div>
+                        }
+                    </div>
                 </div>
             }
         </div>
     }
-    @if (!string.IsNullOrWhiteSpace(adviceText))
+    else
     {
-        <div class="amed-block amed-preline">@adviceText</div>
+        <div class="amed-block">-</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(adviceText) || medicineItems.Any(item => !string.IsNullOrWhiteSpace(item.Advice)))
+    {
+        <section class="amed-advice-section">
+            <div class="amed-advice-heading">
+                <span class="amed-advice-icon" aria-hidden="true">i</span>
+                <div>
+                    <strong>คำแนะนำสำหรับผู้รับบริการ</strong>
+                    <small>ข้อควรปฏิบัติและข้อควรระวังเพิ่มเติม</small>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(adviceText))
+            {
+                <div class="amed-advice-general amed-preline">@adviceText</div>
+            }
+
+            @foreach (var item in medicineItems.Where(item => !string.IsNullOrWhiteSpace(item.Advice)))
+            {
+                <div class="amed-advice-item">
+                    <span class="amed-advice-bullet" aria-hidden="true"></span>
+                    <div>
+                        <strong>ยารายการที่ @item.Index · @item.Name</strong>
+                        <p>@item.Advice</p>
+                    </div>
+                </div>
+            }
+        </section>
     }
 
     <div class="amed-section">
@@ -139,8 +194,11 @@
     </div>
 
     <div class="amed-report-bottom">
+        <div class="amed-service-end">
+            <span>วัน–เวลาสิ้นสุดการรับบริการ</span>
+            <strong>@DisplayValue(Model.ServiceEndDateTimeText)</strong>
+        </div>
         <div class="amed-revision-text">ปรับปรุงวันที่ 18 ตุลาคม 2567</div>
-        <div class="amed-auth-time">Authentication Time: @DisplayValue(Model.AuthenticationTimeText)</div>
         <div class="amed-barcode">
             @Html.Raw(RenderCode39Svg(Model.BarcodeText))
             <div>*@Model.BarcodeText*</div>
@@ -170,7 +228,7 @@
         return (value ?? string.Empty).Contains(expected, StringComparison.OrdinalIgnoreCase) ? "☑" : "☐";
     }
 
-    private sealed record MedicineLine(string Name, string Usage, string Advice);
+    private sealed record MedicineLine(string Index, string Name, string Usage, string Advice);
 
     private static List<MedicineLine> ExtractMedicineItems(string? rawValue)
     {
@@ -190,7 +248,7 @@
 
         var matches = System.Text.RegularExpressions.Regex.Matches(
             text,
-            @"(?<index>\d+)\.\s*(?<body>.*?)(?=(?:\d+\.\s)|$)",
+            @"(?<!\d)(?<index>\d+)\.\s*(?<body>.*?)(?=(?<!\d)\d+\.\s|(?:\r?\n)\s*-\s+\S|$)",
             System.Text.RegularExpressions.RegexOptions.Singleline);
 
         var items = new List<MedicineLine>();
@@ -212,7 +270,7 @@
             }
 
             advice = CleanTrailingReferralText(advice);
-            items.Add(new MedicineLine(CleanReportText($"{match.Groups["index"].Value}. {name}"), CleanReportText(usage), CleanReportText(advice)));
+            items.Add(new MedicineLine(match.Groups["index"].Value, CleanReportText(name), CleanReportText(usage), CleanReportText(advice)));
         }
 
         return items;
@@ -222,13 +280,31 @@
     {
         var text = NormalizeTreatmentText(rawValue);
         var firstMedicine = System.Text.RegularExpressions.Regex.Match(text, @"(?<!\d)\d+\.\s+");
-        if (firstMedicine.Success)
+        if (!firstMedicine.Success)
         {
-            text = text[..firstMedicine.Index];
+            return CleanReportText(CleanTrailingReferralText(text));
         }
 
-        text = CleanTrailingReferralText(text);
-        return CleanReportText(text);
+        var adviceParts = new List<string>();
+        var beforeMedicines = CleanReportText(CleanTrailingReferralText(text[..firstMedicine.Index]));
+        if (!string.IsNullOrWhiteSpace(beforeMedicines))
+        {
+            adviceParts.Add(beforeMedicines);
+        }
+
+        var trailingAdviceMatches = System.Text.RegularExpressions.Regex.Matches(
+            text[firstMedicine.Index..],
+            @"(?m)^\s*-\s*(?<value>[^\r\n]+)");
+        foreach (System.Text.RegularExpressions.Match match in trailingAdviceMatches)
+        {
+            var advice = CleanReportText(CleanTrailingReferralText(match.Groups["value"].Value));
+            if (!string.IsNullOrWhiteSpace(advice))
+            {
+                adviceParts.Add($"- {advice}");
+            }
+        }
+
+        return string.Join(Environment.NewLine, adviceParts.Distinct(StringComparer.OrdinalIgnoreCase));
     }
 
     private static string NormalizeTreatmentText(string? value)

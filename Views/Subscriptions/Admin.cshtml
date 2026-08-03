@@ -1,0 +1,103 @@
+@model SubscriptionAdminViewModel
+@{ ViewData["Title"] = "เครดิตและการสมัครใช้งาน"; }
+<div class="subscription-admin">
+    <header class="admin-hero"><div><span>SUPER ADMIN · SUBSCRIPTION CONTROL</span><h1>เครดิตและการสมัครใช้งาน</h1><p>ควบคุมจำนวนรายการเวชระเบียน OPD แผน Unlimited คำขอติดต่อ และข่าวประชาสัมพันธ์จากจุดเดียว</p></div><div class="admin-summary"><div><strong>@Model.Clinics.Count</strong><small>คลินิก</small></div><div><strong>@Model.Requests.Count(x=>x.Status=="Pending")</strong><small>คำขอใหม่</small></div><div><strong>@Model.Clinics.Count(x=>x.IsUnlimited)</strong><small>Unlimited</small></div></div></header>
+
+    <section class="admin-panel"><div class="panel-title"><div><span>QUOTA</span><h2>โควตาเวชระเบียน OPD รายคลินิก</h2></div></div>
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>คลินิก</th><th>ใช้งาน</th><th>เครดิตรวม</th><th>คงเหลือ</th><th>แผน</th><th></th></tr></thead><tbody>
+        @foreach(var clinic in Model.Clinics){<tr><td><strong>@clinic.ClinicName</strong><small>@clinic.ClinicCode</small></td><td>@clinic.UsedPatients</td><td>@(clinic.IsUnlimited?"ไม่จำกัด":clinic.PatientLimit)</td><td><strong>@(clinic.IsUnlimited?"∞":clinic.Remaining)</strong></td><td><span class="plan-badge @(clinic.IsUnlimited?"unlimited":"credit")">@(clinic.IsUnlimited?"Unlimited":"Credit")</span></td><td><button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quotaModal" data-code="@clinic.ClinicCode" data-name="@clinic.ClinicName" data-limit="@clinic.PatientLimit" data-unlimited="@clinic.IsUnlimited.ToString().ToLowerInvariant()">จัดการ</button></td></tr>}
+        </tbody></table></div>
+    </section>
+
+    <div class="admin-grid">
+        <section class="admin-panel"><div class="panel-title"><div><span>CONTACT REQUESTS</span><h2>คำขอเพิ่มเครดิต</h2></div></div>
+            @if(!Model.Requests.Any()){<div class="empty-admin">ยังไม่มีคำขอติดต่อ</div>}
+            @foreach(var request in Model.Requests){<article class="request-card"><div><span class="request-status @request.Status.ToLowerInvariant()">@request.Status</span><h3>@request.ClinicCode</h3><p>@request.ContactName · <a href="tel:@request.PhoneNumber">@request.PhoneNumber</a></p><small>@(request.RequestUnlimited?"ขอแผน Unlimited":$"ขอเพิ่ม {request.RequestedCredits} เครดิต") · @request.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small></div><form asp-action="UpdateRequest" method="post"><input type="hidden" name="id" value="@request.Id"/><select name="status" class="form-select form-select-sm"><option value="Pending">รอดำเนินการ</option><option value="Contacting">กำลังติดต่อ</option><option value="Completed">เสร็จสิ้น</option><option value="Cancelled">ยกเลิก</option></select><input name="adminNote" class="form-control form-control-sm" value="@request.AdminNote" placeholder="บันทึกการติดต่อ"/><button class="btn btn-sm btn-dark">บันทึก</button></form></article>}
+        </section>
+        <section class="admin-panel"><div class="panel-title"><div><span>PUBLIC BOARD</span><h2>จัดการข่าวประชาสัมพันธ์</h2></div></div>
+            <form asp-action="SaveAnnouncement" method="post" class="announcement-form"><input name="Title" class="form-control" placeholder="หัวข้อข่าว" required/><textarea name="Summary" class="form-control" rows="3" placeholder="รายละเอียดสั้น ๆ" required></textarea><div class="row g-2"><div class="col"><input name="BadgeText" class="form-control" value="ข่าวสาร"/></div><div class="col"><input name="DisplayOrder" type="number" class="form-control" value="0"/></div></div><input name="LinkUrl" class="form-control" placeholder="ลิงก์เพิ่มเติม (ถ้ามี)"/><input type="hidden" name="IsPublished" value="true"/><button class="btn btn-primary">เผยแพร่ข่าว</button></form>
+            <div class="announcement-list">@foreach(var item in Model.Announcements){<article><div><span>@item.BadgeText</span><strong>@item.Title</strong><small>@item.Summary</small></div><form asp-action="DeleteAnnouncement" method="post" onsubmit="return confirm('ลบข่าวนี้?')"><input type="hidden" name="id" value="@item.Id"/><button class="btn btn-sm btn-outline-danger">ลบ</button></form></article>}</div>
+        </section>
+    </div>
+    <section class="admin-panel media-admin-panel"><div class="panel-title"><div><span>PROMOTIONAL MEDIA</span><h2>วิดีโอและ YouTube หน้าสมัครสมาชิก</h2></div><small>Hero เล่นอัตโนมัติแบบปิดเสียง ส่วน Feature และ Board ให้ผู้ใช้ควบคุม</small></div>
+        @if ((TempData["AdminMediaError"] as string) is string mediaError){<div class="alert alert-danger">@mediaError</div>}
+        <form asp-action="SaveMedia" method="post" enctype="multipart/form-data" class="media-admin-form">
+            <div><label class="form-label">ชื่อสื่อ</label><input name="Title" class="form-control" required/></div><div><label class="form-label">คำอธิบาย</label><input name="Description" class="form-control"/></div>
+            <div><label class="form-label">ประเภท</label><select name="MediaType" id="mediaType" class="form-select"><option value="Video">ไฟล์ MP4/WebM</option><option value="YouTube">YouTube</option></select></div><div><label class="form-label">ตำแหน่ง</label><select name="Placement" class="form-select"><option value="Hero">Hero Banner</option><option value="Feature">วิดีโอแนะนำฉบับเต็ม</option><option value="Board">กระดานโฆษณา</option></select></div>
+            <div class="media-video-field"><label class="form-label">ไฟล์วิดีโอ</label><input name="VideoFile" type="file" accept="video/mp4,video/webm" class="form-control"/></div><div class="media-youtube-field" hidden><label class="form-label">YouTube URL</label><input name="YouTubeUrl" type="url" class="form-control" placeholder="https://www.youtube.com/watch?v=..."/></div><div><label class="form-label">ภาพ Poster</label><input name="PosterFile" type="file" accept="image/jpeg,image/png,image/webp" class="form-control"/></div>
+            <div><label class="form-label">ลำดับ</label><input name="DisplayOrder" type="number" value="0" class="form-control"/></div><div><label class="form-label">เริ่มเผยแพร่</label><input name="StartsAt" type="datetime-local" class="form-control"/></div><div><label class="form-label">สิ้นสุด</label><input name="EndsAt" type="datetime-local" class="form-control"/></div>
+            <div class="media-options"><label><input name="AutoPlay" value="true" type="checkbox"/> Autoplay</label><label><input name="Loop" value="true" type="checkbox"/> เล่นวน</label><label><input name="IsPublished" value="true" type="checkbox" checked/> เผยแพร่</label></div><button class="btn btn-primary">เพิ่มสื่อประชาสัมพันธ์</button>
+        </form>
+        <div class="media-admin-list">@foreach(var media in Model.PromotionalMedia){<article><div class="media-admin-preview">@if(media.MediaType=="YouTube"){<span>YT</span>}else{<video src="@media.MediaUrl" muted preload="metadata"></video>}</div><div><span>@media.Placement · @media.MediaType</span><strong>@media.Title</strong><small>@(media.IsPublished?"เผยแพร่":"ปิด") · @(media.AutoPlay?"Autoplay":"กดเพื่อเล่น")</small></div><form asp-action="DeleteMedia" method="post" onsubmit="return confirm('ลบสื่อนี้?')"><input type="hidden" name="id" value="@media.Id"/><button class="btn btn-sm btn-outline-danger">ลบ</button></form></article>}</div>
+    </section>
+</div>
+
+<div class="modal fade" id="mediaEditModal" tabindex="-1" aria-labelledby="mediaEditTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content quota-modal">
+        <form asp-action="SaveMedia" method="post" enctype="multipart/form-data" id="mediaEditForm">
+            <div class="modal-header"><div><span>PROMOTIONAL MEDIA</span><h2 class="modal-title" id="mediaEditTitle">แก้ไขสื่อประชาสัมพันธ์</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body media-edit-grid">
+                <input type="hidden" name="Id" id="editMediaId"/>
+                <div><label class="form-label">ชื่อสื่อ</label><input name="Title" id="editMediaTitle" class="form-control" required/></div>
+                <div><label class="form-label">คำอธิบาย</label><input name="Description" id="editMediaDescription" class="form-control"/></div>
+                <div><label class="form-label">ประเภท</label><select name="MediaType" id="editMediaType" class="form-select"><option value="Video">ไฟล์ MP4/WebM</option><option value="YouTube">YouTube</option></select></div>
+                <div><label class="form-label">ตำแหน่ง</label><select name="Placement" id="editMediaPlacement" class="form-select"><option value="Hero">Hero Banner</option><option value="Feature">วิดีโอแนะนำฉบับเต็ม</option><option value="Board">กระดานโฆษณา</option></select></div>
+                <div id="editVideoField"><label class="form-label">เปลี่ยนไฟล์วิดีโอ <small>(ไม่เลือกเพื่อใช้ไฟล์เดิม)</small></label><input name="VideoFile" type="file" accept="video/mp4,video/webm" class="form-control"/></div>
+                <div id="editYouTubeField"><label class="form-label">YouTube URL</label><input name="YouTubeUrl" id="editYouTubeUrl" type="url" class="form-control"/></div>
+                <div><label class="form-label">เปลี่ยนภาพ Poster <small>(ไม่เลือกเพื่อใช้ภาพเดิม)</small></label><input name="PosterFile" type="file" accept="image/jpeg,image/png,image/webp" class="form-control"/></div>
+                <div><label class="form-label">ลำดับ</label><input name="DisplayOrder" id="editMediaOrder" type="number" class="form-control"/></div>
+                <div><label class="form-label">เริ่มเผยแพร่</label><input name="StartsAt" id="editMediaStarts" type="datetime-local" class="form-control"/></div>
+                <div><label class="form-label">สิ้นสุด</label><input name="EndsAt" id="editMediaEnds" type="datetime-local" class="form-control"/></div>
+                <div class="media-options media-edit-options"><label><input name="AutoPlay" id="editMediaAutoPlay" value="true" type="checkbox"/> Autoplay</label><label><input name="Loop" id="editMediaLoop" value="true" type="checkbox"/> เล่นวน</label><label><input name="IsPublished" id="editMediaPublished" value="true" type="checkbox"/> เผยแพร่</label></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button><button class="btn btn-primary">บันทึกการแก้ไข</button></div>
+        </form>
+    </div></div>
+</div>
+
+<div class="modal fade" id="quotaModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content quota-modal"><form asp-action="UpdateQuota" method="post"><div class="modal-header"><div><span>QUOTA CONTROL</span><h2 class="modal-title">จัดการเครดิต OPD</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="ClinicCode" id="quotaClinicCode"/><div class="quota-clinic-name" id="quotaClinicName"></div><label class="form-label">เครดิต OPD รวม</label><input type="number" min="0" max="1000000" name="PatientLimit" id="quotaPatientLimit" class="form-control form-control-lg" required/><div class="form-check form-switch unlimited-switch"><input type="checkbox" name="IsUnlimited" value="true" class="form-check-input" id="quotaUnlimited"/><label class="form-check-label" for="quotaUnlimited"><strong>Unlimited</strong><small>ไม่จำกัดจำนวนรายการ OPD</small></label></div><label class="form-label">เหตุผลหรือหมายเหตุ</label><textarea name="Reason" class="form-control" rows="3" required placeholder="เช่น เติมเครดิตตามแพ็กเกจ"></textarea></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button><button class="btn btn-primary">ยืนยันการเปลี่ยนแปลง</button></div></form></div></div></div>
+<script>document.getElementById('quotaModal')?.addEventListener('show.bs.modal',e=>{const b=e.relatedTarget;document.getElementById('quotaClinicCode').value=b.dataset.code;document.getElementById('quotaClinicName').textContent=`${b.dataset.name} · ${b.dataset.code}`;document.getElementById('quotaPatientLimit').value=b.dataset.limit;document.getElementById('quotaUnlimited').checked=b.dataset.unlimited==='true'});const mediaType=document.getElementById('mediaType');mediaType?.addEventListener('change',()=>{document.querySelector('.media-video-field').hidden=mediaType.value!=='Video';document.querySelector('.media-youtube-field').hidden=mediaType.value!=='YouTube'});</script>
+<script>
+(() => {
+    const mediaItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PromotionalMedia));
+    const articles = document.querySelectorAll('.media-admin-list article');
+    const editModalElement = document.getElementById('mediaEditModal');
+    const typeInput = document.getElementById('editMediaType');
+    const updateTypeFields = () => {
+        const isVideo = typeInput.value === 'Video';
+        document.getElementById('editVideoField').hidden = !isVideo;
+        document.getElementById('editYouTubeField').hidden = isVideo;
+    };
+    typeInput?.addEventListener('change', updateTypeFields);
+    const localDateTime = value => value ? value.substring(0, 16) : '';
+
+    articles.forEach((article, index) => {
+        const item = mediaItems[index];
+        if (!item) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm btn-outline-primary media-edit-button';
+        button.textContent = 'แก้ไข';
+        button.addEventListener('click', () => {
+            document.getElementById('mediaEditForm').reset();
+            document.getElementById('editMediaId').value = item.Id;
+            document.getElementById('editMediaTitle').value = item.Title || '';
+            document.getElementById('editMediaDescription').value = item.Description || '';
+            typeInput.value = item.MediaType;
+            document.getElementById('editMediaPlacement').value = item.Placement;
+            document.getElementById('editYouTubeUrl').value = item.MediaType === 'YouTube' ? item.MediaUrl : '';
+            document.getElementById('editMediaOrder').value = item.DisplayOrder;
+            document.getElementById('editMediaStarts').value = localDateTime(item.StartsAtUtc);
+            document.getElementById('editMediaEnds').value = localDateTime(item.EndsAtUtc);
+            document.getElementById('editMediaAutoPlay').checked = item.AutoPlay;
+            document.getElementById('editMediaLoop').checked = item.Loop;
+            document.getElementById('editMediaPublished').checked = item.IsPublished;
+            updateTypeFields();
+            if (editModalElement && window.bootstrap)
+                bootstrap.Modal.getOrCreateInstance(editModalElement).show();
+        });
+        const deleteForm = article.querySelector('form');
+        deleteForm?.before(button);
+    });
+})();
+</script>

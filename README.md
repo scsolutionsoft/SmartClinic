@@ -25,7 +25,7 @@
 
 ## 🚀 ขั้นตอนการติดตั้ง
 
-### Phase 1: ติดตั้ง Web Application
+### ขั้นตอนที่ 1: ติดตั้ง Web Application
 
 #### 1.1 ติดตั้ง SQL Server Database
 ```bash
@@ -60,7 +60,7 @@ Web application จะรันบนที่อยู่ `https://localhost:52
 
 ---
 
-### Phase 2: ติดตั้ง Smart Card Reader Bridge
+### ขั้นตอนที่ 2: ติดตั้ง Smart Card Reader Bridge
 
 #### 2.1 ติดตั้ง Windows Smart Card Reader Driver
 - เสียบ smart card reader เข้ากับคอมพิวเตอร์

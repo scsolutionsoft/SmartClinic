@@ -1,49 +1,179 @@
-﻿@{
+@model DashboardViewModel
+<link rel="stylesheet" href="~/css/dashboard-clinical-overview.css" asp-append-version="true" />
+@{
     ViewData["Title"] = "แดชบอร์ด";
+    var totalGender = Math.Max(1, Model.TotalPatients);
+    var malePercent = Model.MalePatients * 100d / totalGender;
+    var femalePercent = Model.FemalePatients * 100d / totalGender;
 }
 
-<section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
-    <div class="row align-items-center g-4">
-        <div class="col-lg-8">
-            <span class="badge bg-light text-dark mb-3">SmartClinic</span>
-            <h1 class="display-5 fw-semibold mb-3">แพลตฟอร์มบริหารจัดการคลินิก</h1>
-            <p class="lead mb-0">ระบบบริหารคลินิก ประวัติการรักษา ลายเซ็นผู้รับบริการ และรายงาน พร้อมธีม Bootswatch ที่สวยงามและหรูหรา</p>
-        </div>
-        <div class="col-lg-4">
-            <div class="glass-card p-3 p-lg-4 rounded-4">
-                <div class="fw-semibold mb-2">ตัวอย่างธีม</div>
-                <div class="small opacity-75">เลือกธีมจากแถบด้านบนได้ทันที</div>
-                <div class="small opacity-75">รองรับการปรับลุคให้เข้ากับภาพลักษณ์คลินิก</div>
+<section class="dashboard-hero mb-4">
+    <div class="dashboard-hero-identity">
+        @if (!string.IsNullOrWhiteSpace(Model.ClinicLogoUrl))
+        {
+            <div class="dashboard-clinic-logo-frame">
+                <img src="@Model.ClinicLogoUrl" alt="โลโก้ @Model.ClinicName" class="dashboard-clinic-logo" />
             </div>
+        }
+        <div class="dashboard-hero-copy">
+            <span class="dashboard-eyebrow">CLINIC OVERVIEW</span>
+            <h1>@Model.ClinicName</h1>
+            <p>ภาพรวมข้อมูลสำคัญเพื่อการติดตามและบริหารจัดการคลินิก</p>
+        </div>
+    </div>
+    <div class="dashboard-hero-status">
+        <span class="dashboard-live-dot"></span>
+        <div>
+            <strong>ระบบพร้อมใช้งาน</strong>
+            <small>รหัสคลินิก @Model.ClinicCode · อัปเดต @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</small>
         </div>
     </div>
 </section>
 
+<section class="dashboard-kpi-grid mb-4" aria-label="สถิติสำคัญ">
+    <a class="dashboard-kpi dashboard-kpi-blue" asp-controller="Patients" asp-action="Index">
+        <span class="dashboard-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3 1.3 3 3 3ZM8 11c2.2 0 4-1.8 4-4S10.2 3 8 3 4 4.8 4 7s1.8 4 4 4Zm8 2c-2 0-6 1-6 3v3h7v-3c0-2-3-3-5-3ZM8 13c-3.1 0-7 1.6-7 4v2h14v-2c0-2.4-3.9-4-7-4Z"/></svg></span>
+        <span class="dashboard-kpi-label">ผู้ป่วยทั้งหมด</span>
+        <strong>@Model.TotalPatients.ToString("N0")</strong>
+        <small>ราย ในฐานข้อมูลคลินิก</small>
+    </a>
+    <a class="dashboard-kpi dashboard-kpi-green" asp-controller="MedicalRecords" asp-action="Index">
+        <span class="dashboard-kpi-icon"><svg viewBox="0 0 24 24"><path d="M19 8a3 3 0 0 0-3 3v2a4 4 0 0 1-8 0v-1.1A5 5 0 0 0 12 7V2h-3v2h1v3a3 3 0 0 1-6 0V4h1V2H2v5a5 5 0 0 0 4 4.9V13a6 6 0 0 0 12 0v-2a1 1 0 1 1 1 1h-1v2h1a3 3 0 0 0 0-6Z"/></svg></span>
+        <span class="dashboard-kpi-label">เข้ารักษาวันนี้</span>
+        <strong>@Model.VisitsToday.ToString("N0")</strong>
+        <small>เดือนนี้ @Model.VisitsThisMonth.ToString("N0") ครั้ง</small>
+    </a>
+    <a class="dashboard-kpi dashboard-kpi-violet" asp-controller="PatientMedicalProfiles" asp-action="Index">
+        <span class="dashboard-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 4h-1.2A3 3 0 0 0 12 2a3 3 0 0 0-2.8 2H8a2 2 0 0 0-2 2v14h12V6a2 2 0 0 0-2-2Zm-4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm3 12H9v-2h6v2Zm0-4H9v-2h6v2Z"/></svg></span>
+        <span class="dashboard-kpi-label">เวชระเบียนผู้รับบริการ</span>
+        <strong>@Model.MedicalProfiles.ToString("N0")</strong>
+        <small>ครอบคลุม @Model.ProfileCoveragePercent% ของผู้ป่วย</small>
+    </a>
+    <a class="dashboard-kpi dashboard-kpi-orange" asp-controller="Signatures" asp-action="Index">
+        <span class="dashboard-kpi-icon"><svg viewBox="0 0 24 24"><path d="M3 17.3V21h3.7L17.6 10.1l-3.7-3.7L3 17.3Zm17.7-10a1 1 0 0 0 0-1.4l-2.6-2.6a1 1 0 0 0-1.4 0l-2 2 3.7 3.7 2.3-1.7ZM3 23h18v-2H3v2Z"/></svg></span>
+        <span class="dashboard-kpi-label">ผู้ป่วยที่มีลายเซ็น</span>
+        <strong>@Model.SignedPatients.ToString("N0")</strong>
+        <small>ครอบคลุม @Model.SignatureCoveragePercent% ของผู้ป่วย</small>
+    </a>
+</section>
+
+<section class="dashboard-clinical-layout mb-4" aria-label="รายงานระบบงานและข่าวประกาศ">
+    <div class="dashboard-module-panel">
+        <header><div><span>CLINICAL MODULE REPORT</span><h2>ภาพรวมระบบงานเพิ่มเติม</h2><p>ข้อมูลล่าสุดของบริการและคลังความรู้ภายในคลินิก</p></div><b>อัปเดตปัจจุบัน</b></header>
+        <div class="dashboard-module-grid">
+            <a class="dashboard-module-card module-opd" asp-controller="MedicalRecords" asp-action="Index"><span>OP</span><div><small>OPD‑Card ทั้งหมด</small><strong>@Model.TotalVisits.ToString("N0")</strong><em>@(Model.HasUnlimitedOpdRecords ? "สิทธิ์ Unlimited" : $"คงเหลือ {Model.RemainingOpdRecords:N0} จาก {Model.OpdRecordLimit:N0} รายการ")</em></div><i>›</i></a>
+            <a class="dashboard-module-card module-label" asp-controller="MedicationLabels" asp-action="Index"><span>LB</span><div><small>แม่แบบฉลากยา</small><strong>@Model.MedicationLabelTemplates.ToString("N0")</strong><em>พร้อมจัดพิมพ์ A15</em></div><i>›</i></a>
+            <a class="dashboard-module-card module-drug" asp-controller="DrugCatalog" asp-action="Index"><span>Rx</span><div><small>ยาเปิดใช้งาน</small><strong>@Model.ActiveDrugs.ToString("N0")</strong><em>เชื่อมแล้ว @Model.LinkedIcdDiseases.ToString("N0") โรค ICD‑10</em></div><i>›</i></a>
+            <a class="dashboard-module-card module-icd" asp-controller="DrugCatalog" asp-action="Index"><span>IC</span><div><small>โรคที่มีรายการยา</small><strong>@Model.LinkedIcdDiseases.ToString("N0")</strong><em>รายงานความสัมพันธ์ยา–โรค</em></div><i>›</i></a>
+            <a class="dashboard-module-card module-advice" asp-controller="DrugAdvice" asp-action="Index"><span>AD</span><div><small>คำแนะนำตามโรค</small><strong>@Model.ActiveDrugAdvice.ToString("N0")</strong><em>รายการที่เปิดใช้งาน</em></div><i>›</i></a>
+            <a class="dashboard-module-card module-wound" asp-controller="WoundCare" asp-action="Index"><span>WC</span><div><small>บริการทำแผล</small><strong>@Model.WoundCareRecords.ToString("N0")</strong><em>เวชระเบียนการทำแผล</em></div><i>›</i></a>
+        </div>
+    </div>
+    <aside class="dashboard-announcement-panel">
+        <header><div><span>CENTRAL ANNOUNCEMENT</span><h2>ข่าวและประกาศ</h2></div><b>ส่วนกลาง</b></header>
+        <div class="dashboard-announcement-list">
+            @foreach(var item in Model.Announcements)
+            {
+                var isSafeLink = item.LinkUrl.StartsWith("/", StringComparison.Ordinal) ||
+                    (Uri.TryCreate(item.LinkUrl, UriKind.Absolute, out var announcementUri) && (announcementUri.Scheme == Uri.UriSchemeHttp || announcementUri.Scheme == Uri.UriSchemeHttps));
+                <article><div class="announcement-meta"><span>@item.BadgeText</span><time>@item.PublishedDateText</time></div><strong>@item.Title</strong><p>@item.Summary</p>@if(isSafeLink){<a href="@item.LinkUrl" target="@(item.LinkUrl.StartsWith("/")?null:"_blank")" rel="@(item.LinkUrl.StartsWith("/")?null:"noopener")">อ่านรายละเอียด <span>›</span></a>}</article>
+            }
+            @if(Model.Announcements.Count==0){<div class="dashboard-announcement-empty"><span>i</span><div><strong>ยังไม่มีประกาศใหม่</strong><small>ข่าวจากผู้ดูแลส่วนกลางจะแสดงบริเวณนี้</small></div></div>}
+        </div>
+    </aside>
+</section>
+
 <div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="card-title">ข้อมูลคลินิก</h5>
-                <p class="card-text">ใช้ข้อมูลจาก สปสช. เป็นข้อมูลหลักทั้งรหัส ชื่อ และที่อยู่</p>
+    <div class="col-xl-7">
+        <section class="card dashboard-panel h-100">
+            <div class="card-body p-4">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="dashboard-panel-kicker">7 DAYS TREND</span>
+                        <h2>แนวโน้มการเข้ารักษา</h2>
+                    </div>
+                    <div class="dashboard-total-pill">รวมทั้งหมด @Model.TotalVisits.ToString("N0") ครั้ง</div>
+                </div>
+                <div class="dashboard-bar-chart" role="img" aria-label="จำนวนการเข้ารักษาในช่วง 7 วัน">
+                    @foreach (var day in Model.DailyVisits)
+                    {
+                        <div class="dashboard-bar-item">
+                            <div class="dashboard-bar-value">@day.Count</div>
+                            <div class="dashboard-bar-track">
+                                <div class="dashboard-bar-fill" style="height:@(day.HeightPercent)%"></div>
+                            </div>
+                            <strong>@day.DayLabel</strong>
+                            <small>@day.DateLabel</small>
+                        </div>
+                    }
+                </div>
             </div>
-        </div>
+        </section>
     </div>
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="card-title">ผู้ป่วยและ OPD</h5>
-                <p class="card-text">รองรับข้อมูลผู้ป่วย ไฟล์ OPD Card PDF และภาพลายเซ็นผู้รับบริการ</p>
+    <div class="col-xl-5">
+        <section class="card dashboard-panel h-100">
+            <div class="card-body p-4">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="dashboard-panel-kicker">PATIENT PROFILE</span>
+                        <h2>สัดส่วนผู้ป่วย</h2>
+                    </div>
+                </div>
+                <div class="dashboard-gender-layout">
+                    <div class="dashboard-donut"
+                         style="--male:@(malePercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; --female:@(femalePercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;">
+                        <div><strong>@Model.TotalPatients</strong><small>ผู้ป่วย</small></div>
+                    </div>
+                    <div class="dashboard-legend">
+                        <div><span class="legend-dot male"></span><span>ชาย</span><strong>@Model.MalePatients</strong></div>
+                        <div><span class="legend-dot female"></span><span>หญิง</span><strong>@Model.FemalePatients</strong></div>
+                        <div><span class="legend-dot other"></span><span>อื่น ๆ / ไม่ระบุ</span><strong>@Model.OtherPatients</strong></div>
+                    </div>
+                </div>
+                <div class="dashboard-coverage">
+                    <div>
+                        <span>ความครบถ้วนเวชระเบียน</span><strong>@Model.ProfileCoveragePercent%</strong>
+                        <div class="progress"><div class="progress-bar bg-info" style="width:@Model.ProfileCoveragePercent%"></div></div>
+                    </div>
+                    <div>
+                        <span>ความครอบคลุมลายเซ็น</span><strong>@Model.SignatureCoveragePercent%</strong>
+                        <div class="progress"><div class="progress-bar bg-success" style="width:@Model.SignatureCoveragePercent%"></div></div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="card-title">รายงาน</h5>
-                <p class="card-text">พิมพ์รายงานประวัติการรักษาและแสดงลายเซ็นใต้ไฟล์ PDF ได้</p>
-            </div>
-        </div>
+        </section>
     </div>
 </div>
 
-
+<section class="card dashboard-panel">
+    <div class="card-body p-4">
+        <div class="dashboard-panel-heading">
+            <div>
+                <span class="dashboard-panel-kicker">RECENT ACTIVITY</span>
+                <h2>การเข้ารักษาล่าสุด</h2>
+            </div>
+            <a class="btn btn-outline-primary btn-sm" asp-controller="MedicalRecords" asp-action="Index">ดูประวัติทั้งหมด</a>
+        </div>
+        <div class="dashboard-activity-list">
+            @{ var visitIndex = 1; }
+            @foreach (var visit in Model.RecentVisits)
+            {
+                <a class="dashboard-activity-item" asp-controller="MedicalRecords" asp-action="Report" asp-route-id="@visit.RecordId">
+                    <span class="dashboard-activity-rank">@visitIndex</span>
+                    <span class="dashboard-activity-patient">
+                        <strong>@visit.PatientName</strong>
+                        <small>@visit.CitizenId</small>
+                    </span>
+                    <span class="dashboard-activity-diagnosis">@visit.Diagnosis</span>
+                    <time>@visit.VisitDateText</time>
+                    <span class="dashboard-activity-arrow">›</span>
+                </a>
+                visitIndex++;
+            }
+            @if (!Model.RecentVisits.Any())
+            {
+                <div class="dashboard-empty">ยังไม่มีข้อมูลการเข้ารักษา</div>
+            }
+        </div>
+    </div>
+</section>

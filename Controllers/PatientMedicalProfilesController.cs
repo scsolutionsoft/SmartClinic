@@ -26,10 +26,13 @@ public class PatientMedicalProfilesController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search)
     {
         var clinicCode = await GetClinicCode();
-        return View(await BuildDashboard(clinicCode, "พร้อมอัปโหลดและอ่านเวชระเบียนผู้รับบริการ"));
+        return View(await BuildDashboard(
+            clinicCode,
+            "พร้อมอัปโหลดและอ่านเวชระเบียนผู้รับบริการ",
+            searchTerm: search));
     }
 
     [HttpGet]
@@ -305,13 +308,20 @@ public class PatientMedicalProfilesController : Controller
             .AsNoTracking()
             .AnyAsync(x => x.ClinicCode == clinicCode && x.CitizenId == profile.CitizenId);
         var hasPatientPhoto = profile.Patient.PhotoData is { Length: > 0 };
+        var clinicLogoPath = await dbContext.Clinics
+            .AsNoTracking()
+            .Where(x => x.ClinicCode == clinicCode)
+            .Select(x => x.LogoPath)
+            .FirstOrDefaultAsync();
         var adminUsers = await userManager.GetUsersInRoleAsync("AdminClinic");
         var clinicAdmin = adminUsers
             .Where(x => x.ClinicCode == clinicCode)
             .OrderBy(x => x.UserName)
             .FirstOrDefault();
 
-        ViewBag.LogoUrl = Url.Content("~/img/community-clinic-logo.svg");
+        ViewBag.LogoUrl = string.IsNullOrWhiteSpace(clinicLogoPath)
+            ? Url.Content("~/img/community-clinic-logo.svg")
+            : clinicLogoPath;
         ViewBag.PatientPhotoUrl = hasPatientPhoto
             ? Url.Action("Photo", "Patients", new { citizenId = profile.CitizenId })
             : Url.Content("~/img/photo-not-available.svg");
@@ -363,6 +373,7 @@ public class PatientMedicalProfilesController : Controller
         }
 
         model.CurrentPdfFileName = profile.SourcePdfFileName ?? string.Empty;
+        model.HasPdfFile = profile.SourcePdfData is { Length: > 0 };
         var citizenId = DigitsOnly(model.CitizenId ?? string.Empty);
         if (citizenId.Length != 13)
         {
@@ -435,6 +446,36 @@ public class PatientMedicalProfilesController : Controller
         await dbContext.SaveChangesAsync();
         TempData["PatientMedicalProfileStatus"] = "updated";
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadPdf(int id, IFormFile? sourcePdfFile)
+    {
+        var clinicCode = await GetClinicCode();
+        var profile = await dbContext.PatientMedicalProfiles
+            .FirstOrDefaultAsync(x => x.Id == id && x.ClinicCode == clinicCode);
+        if (profile is null) return NotFound(new { success = false, error = "ไม่พบเวชระเบียนผู้รับบริการ" });
+        if (sourcePdfFile is null || sourcePdfFile.Length == 0)
+            return BadRequest(new { success = false, error = "กรุณาเลือกไฟล์ PDF" });
+        if (!IsPdf(sourcePdfFile))
+            return BadRequest(new { success = false, error = "รองรับเฉพาะไฟล์ PDF เท่านั้น" });
+        if (sourcePdfFile.Length > 20 * 1024 * 1024)
+            return BadRequest(new { success = false, error = "ไฟล์ PDF ต้องมีขนาดไม่เกิน 20 MB" });
+
+        await using var stream = new MemoryStream();
+        await sourcePdfFile.CopyToAsync(stream);
+        profile.SourcePdfFileName = BuildSourceFileName(profile.CitizenId, profile.InformationGivenDate);
+        profile.SourcePdfContentType = "application/pdf";
+        profile.SourcePdfData = stream.ToArray();
+        profile.UpdatedAtUtc = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync();
+
+        return Ok(new {
+            success = true,
+            fileName = profile.SourcePdfFileName,
+            previewUrl = Url.Action(nameof(Preview), new { id = profile.Id })
+        });
     }
 
     [HttpPost]
@@ -525,11 +566,22 @@ public class PatientMedicalProfilesController : Controller
     private async Task<PatientMedicalProfilesDashboardViewModel> BuildDashboard(
         string clinicCode,
         string statusMessage,
-        PatientMedicalProfilesDashboardViewModel? existingModel = null)
+        PatientMedicalProfilesDashboardViewModel? existingModel = null,
+        string? searchTerm = null)
     {
-        var profileRows = await dbContext.PatientMedicalProfiles
+        var normalizedSearch = searchTerm?.Trim();
+        var profilesQuery = dbContext.PatientMedicalProfiles
             .AsNoTracking()
-            .Where(x => x.ClinicCode == clinicCode)
+            .Where(x => x.ClinicCode == clinicCode);
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            profilesQuery = profilesQuery.Where(x =>
+                x.PatientName.Contains(normalizedSearch) ||
+                x.CitizenId.Contains(normalizedSearch));
+        }
+
+        var profileRows = await profilesQuery
             .OrderByDescending(x => x.InformationGivenDate)
             .ThenByDescending(x => x.CreatedAtUtc)
             .Take(50)
@@ -566,6 +618,7 @@ public class PatientMedicalProfilesController : Controller
 
         var model = existingModel ?? new PatientMedicalProfilesDashboardViewModel();
         model.Profiles = profiles;
+        model.SearchTerm = normalizedSearch ?? string.Empty;
         model.StatusMessage = statusMessage;
         return model;
     }

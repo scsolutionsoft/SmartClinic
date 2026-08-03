@@ -14,6 +14,7 @@ Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 // SQL Server connection string for SmartClinic database
 const string ConnectionString = "Server=localhost;Database=SmartClinic;Trusted_Connection=True;TrustServerCertificate=True;";
 const int BridgePort = 9999;
+var allowedOrigins = GetAllowedOrigins();
 
 var listener = new HttpListener();
 listener.Prefixes.Add($"http://localhost:{BridgePort}/");
@@ -30,12 +31,34 @@ catch (HttpListenerException ex) when (ex.ErrorCode == 183)
 
 Console.WriteLine("SmartClinic Card Reader Bridge");
 Console.WriteLine($"WebSocket server listening on ws://localhost:{BridgePort}/card");
+Console.WriteLine($"Allowed web origins: {string.Join(", ", allowedOrigins)}");
 Console.WriteLine("Using PC/SC API to read Thai Smart Card or Database Fallback...");
 Console.WriteLine("Waiting for connections...");
 
 while (true)
 {
     var context = await listener.GetContextAsync();
+    var requestOrigin = context.Request.Headers["Origin"];
+    var isAllowedOrigin = IsAllowedOrigin(requestOrigin, allowedOrigins);
+
+    ApplyCorsHeaders(context.Request, context.Response, requestOrigin, isAllowedOrigin);
+
+    if (context.Request.HttpMethod.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = isAllowedOrigin ? 204 : 403;
+        context.Response.Close();
+        continue;
+    }
+
+    // Browser requests must identify an approved SmartClinic origin. Requests
+    // without Origin are still allowed for direct local health checks.
+    if (!string.IsNullOrWhiteSpace(requestOrigin) && !isAllowedOrigin)
+    {
+        Console.WriteLine($"Rejected request from unapproved origin: {requestOrigin}");
+        context.Response.StatusCode = 403;
+        context.Response.Close();
+        continue;
+    }
 
     if (context.Request.Url is not null && context.Request.Url.AbsolutePath == "/status")
     {
@@ -52,6 +75,77 @@ while (true)
 
     var wsContext = await context.AcceptWebSocketAsync(subProtocol: null);
     _ = Task.Run(async () => await HandleClientAsync(wsContext.WebSocket));
+}
+
+static HashSet<string> GetAllowedOrigins()
+{
+    const string productionOrigin = "https://paweerapatclinic.online";
+    var configuredOrigins = Environment.GetEnvironmentVariable("SMARTCLINIC_ALLOWED_ORIGINS");
+    var origins = string.IsNullOrWhiteSpace(configuredOrigins)
+        ? new[] { productionOrigin, "http://localhost", "https://localhost" }
+        : configuredOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    return origins
+        .Select(origin => origin.TrimEnd('/'))
+        .Where(origin => Uri.TryCreate(origin, UriKind.Absolute, out _))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+}
+
+static bool IsAllowedOrigin(string? requestOrigin, HashSet<string> allowedOrigins)
+{
+    if (string.IsNullOrWhiteSpace(requestOrigin))
+    {
+        return true;
+    }
+
+    if (!Uri.TryCreate(requestOrigin, UriKind.Absolute, out var originUri))
+    {
+        return false;
+    }
+
+    var normalizedOrigin = originUri.IsDefaultPort
+        ? $"{originUri.Scheme}://{originUri.Host}"
+        : $"{originUri.Scheme}://{originUri.Host}:{originUri.Port}";
+
+    if (allowedOrigins.Contains(normalizedOrigin))
+    {
+        return true;
+    }
+
+    // Development servers commonly use a random localhost port.
+    return allowedOrigins.Contains($"{originUri.Scheme}://localhost")
+        && (originUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || originUri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || originUri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase));
+}
+
+static void ApplyCorsHeaders(
+    HttpListenerRequest request,
+    HttpListenerResponse response,
+    string? requestOrigin,
+    bool isAllowedOrigin)
+{
+    // The web application and the local bridge use different ports, so browsers
+    // treat status checks as cross-origin requests. Modern Chromium browsers can
+    // also preflight requests to a loopback/private-network endpoint.
+    if (!string.IsNullOrWhiteSpace(requestOrigin) && isAllowedOrigin)
+    {
+        response.AddHeader("Access-Control-Allow-Origin", requestOrigin);
+        response.AddHeader("Vary", "Origin");
+    }
+
+    response.AddHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    response.AddHeader(
+        "Access-Control-Allow-Headers",
+        request.Headers["Access-Control-Request-Headers"] ?? "Content-Type");
+
+    if (request.Headers["Access-Control-Request-Private-Network"]
+        ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+    {
+        response.AddHeader("Access-Control-Allow-Private-Network", "true");
+    }
+
+    response.AddHeader("Access-Control-Max-Age", "600");
 }
 
 static async Task HandleClientAsync(WebSocket webSocket)

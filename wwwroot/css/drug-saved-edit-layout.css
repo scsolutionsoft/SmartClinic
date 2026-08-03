@@ -1,0 +1,106 @@
+.saved-drug-edit-modal {
+    max-height: calc(100vh - 2rem);
+    overflow: hidden;
+}
+
+.saved-drug-edit-modal > form {
+    display: flex;
+    max-height: calc(100vh - 2rem);
+    flex-direction: column;
+}
+
+.saved-drug-edit-modal .modal-header,
+.saved-drug-edit-modal .modal-footer {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+}
+
+.saved-drug-edit-modal .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.saved-drug-edit-modal .protocol-editor-section {
+    margin-bottom: 0;
+}
+
+.saved-drug-edit-modal .saved-protocol-list {
+    display: grid;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-color: #8fc8d1 #edf6f7;
+    scrollbar-width: thin;
+}
+
+.saved-drug-edit-modal .saved-protocol-list::-webkit-scrollbar { width: 9px; }
+.saved-drug-edit-modal .saved-protocol-list::-webkit-scrollbar-track { border-radius: 10px; background: #edf6f7; }
+.saved-drug-edit-modal .saved-protocol-list::-webkit-scrollbar-thumb { border: 2px solid #edf6f7; border-radius: 10px; background: #8fc8d1; }
+
+.saved-protocol-card > header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.protocol-badge-report {
+    display: flex !important;
+    min-width: 0;
+    flex: 1;
+    align-items: center !important;
+    gap: .45rem !important;
+}
+
+.protocol-icd-badge,
+.protocol-thai-badge {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: .38rem;
+    padding: .34rem .55rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+}
+
+.protocol-icd-badge {
+    flex: 0 0 auto;
+    border-color: #9bdbe4;
+    background: #fff;
+    color: #087d90;
+}
+
+.protocol-thai-badge {
+    flex: 0 1 auto;
+    border-color: #cde4dc;
+    background: #f5fbf8;
+    color: #285f50;
+}
+
+.protocol-icd-badge i,
+.protocol-thai-badge i {
+    font-size: .54rem;
+    font-style: normal;
+    font-weight: 800;
+    letter-spacing: .04em;
+    opacity: .72;
+}
+
+.protocol-icd-badge strong,
+.protocol-thai-badge strong {
+    color: inherit !important;
+    font-size: .69rem !important;
+    line-height: 1.35;
+    white-space: normal;
+}
+
+.saved-protocol-card .relation-only-grid { padding: .6rem .7rem; }
+.saved-protocol-card .relation-only-grid .form-control,
+.saved-protocol-card .relation-only-grid .form-select { min-height: 36px; }
+
+@media (max-width: 620px) {
+    .protocol-badge-report { align-items: stretch !important; }
+    .protocol-icd-badge,
+    .protocol-thai-badge { width: 100%; border-radius: 9px; }
+    .saved-drug-edit-modal .saved-protocol-list { max-height: 360px; }
+}

@@ -1,0 +1,72 @@
+@model WoundCareDashboardViewModel
+@{ ViewData["Title"] = "การทำแผล"; }
+
+<section class="hero-panel p-4 mb-4 rounded-4 text-white">
+    <h1 class="h2 fw-bold">ระบบบันทึกการทำแผล</h1>
+    <p class="mb-0">อ่านแบบฟอร์มไทยด้วย OCR ตรวจทานข้อมูล และแนบรูปแผลได้ไม่เกิน 4 รูป</p>
+</section>
+
+<div class="row g-4">
+<div class="col-xl-7">
+<div class="card border-0 shadow-sm"><div class="card-body p-4">
+<h2 class="h4">@(Model.Input.Id.HasValue ? "แก้ไขข้อมูลทำแผล" : "เพิ่มข้อมูลทำแผล")</h2>
+<form asp-action="Save" method="post" enctype="multipart/form-data" id="woundForm">
+@Html.AntiForgeryToken()
+<input asp-for="Input.Id" type="hidden" />
+<div asp-validation-summary="All" class="text-danger"></div>
+<div class="border rounded-3 p-3 mb-3">
+ <label class="form-label">แบบฟอร์มต้นฉบับ (ภาพหรือ PDF)</label>
+ <div class="input-group"><input asp-for="Input.SourceDocument" type="file" accept="image/*,application/pdf" class="form-control" id="woundSource" /><button type="button" class="btn btn-info text-white" id="woundOcr">อ่านข้อมูล OCR</button></div>
+ <div class="form-text">OCR ทำงานภายในระบบด้วย Tesseract ภาษาไทยและอังกฤษ กรุณาตรวจทานก่อนบันทึก</div>
+</div>
+<div class="row g-3">
+ <div class="col-md-8"><label class="form-label">ผู้ป่วย</label><select asp-for="Input.PatientId" asp-items="Model.Patients" class="form-select"><option value="">-- เลือกผู้ป่วย --</option></select></div>
+ <div class="col-md-4"><label class="form-label">วันที่รับบริการ</label><input asp-for="Input.VisitDate" type="datetime-local" class="form-control" /></div>
+ <div class="col-md-6"><label class="form-label">เลขประจำตัวผู้รับบริการ</label><input asp-for="Input.ServiceRecipientId" class="form-control" id="wcServiceId" /></div>
+ <div class="col-md-6"><label class="form-label">Authentication Code</label><input asp-for="Input.AuthenticationCode" class="form-control" id="wcAuth" /></div>
+ <div class="col-md-6"><label class="form-label">สาเหตุของแผล</label><textarea asp-for="Input.WoundCause" class="form-control" id="wcCause"></textarea></div>
+ <div class="col-md-6"><label class="form-label">ตำแหน่งของแผล</label><textarea asp-for="Input.WoundLocation" class="form-control" id="wcLocation"></textarea></div>
+ <div class="col-12 d-flex flex-wrap gap-3">
+  <label><input asp-for="Input.IsBruiseOrSutured" /> แผลฟกช้ำหรือแผลเย็บ</label>
+  <label><input asp-for="Input.IsOpenInfected" /> แผลเปิดติดเชื้อ</label>
+  <label><input asp-for="Input.IsLargeOpenWound" /> แผลเปิดขนาดใหญ่</label>
+ </div>
+ <div class="col-md-6"><label class="form-label">ขนาดแผล</label><input asp-for="Input.WoundSize" class="form-control" id="wcSize" /></div>
+ <div class="col-md-3"><label class="form-label">ทำแผลครั้งที่</label><input asp-for="Input.DressingSequence" class="form-control" /></div>
+ <div class="col-md-3"><label class="form-label">ความก้าวหน้า</label><select asp-for="Input.WoundProgress" class="form-select"><option value="">-- เลือก --</option><option>ดีขึ้น</option><option>คงเดิม</option><option>แย่ลง</option></select></div>
+ <div class="col-12"><label class="form-label">รายละเอียดความก้าวหน้า</label><input asp-for="Input.WoundProgressNote" class="form-control" /></div>
+ <div class="col-md"><label class="form-label">อุณหภูมิ °C</label><input asp-for="Input.TemperatureCelsius" class="form-control" id="wcTemp" /></div>
+ <div class="col-md"><label class="form-label">ชีพจร</label><input asp-for="Input.PulseRate" class="form-control" id="wcPulse" /></div>
+ <div class="col-md"><label class="form-label">หายใจ</label><input asp-for="Input.RespiratoryRate" class="form-control" id="wcResp" /></div>
+ <div class="col-md"><label class="form-label">ความดันบน</label><input asp-for="Input.SystolicPressure" class="form-control" id="wcSys" /></div>
+ <div class="col-md"><label class="form-label">ความดันล่าง</label><input asp-for="Input.DiastolicPressure" class="form-control" id="wcDia" /></div>
+ <div class="col-12"><label class="form-label">ผลหลังทำแผล</label><textarea asp-for="Input.PostDressingResult" class="form-control"></textarea></div>
+ <div class="col-12 d-flex flex-wrap gap-3"><label><input asp-for="Input.FollowUpNone" /> ไม่นัด</label><label><input asp-for="Input.FollowUpPhone" /> ติดตามทางโทรศัพท์</label><label><input asp-for="Input.FollowUpClinic" /> นัดที่คลินิก</label><label><input asp-for="Input.FollowUpOther" /> ช่องทางอื่น</label></div>
+ <div class="col-12"><label class="form-label">รายละเอียดติดตาม</label><input asp-for="Input.FollowUpNote" class="form-control" /></div>
+ <div class="col-12"><label class="form-label">การประเมินลักษณะแผล</label><textarea asp-for="Input.WoundAssessment" class="form-control" rows="3"></textarea></div>
+ <div class="col-12"><label class="form-label">คำแนะนำสำหรับผู้รับบริการ</label><textarea asp-for="Input.PatientAdvice" class="form-control" rows="4"></textarea></div>
+ <div class="col-12"><label class="form-label">รูปแผล (สูงสุด 4 รูป รูปละไม่เกิน 5 MB)</label><input asp-for="Input.WoundPhotos" type="file" multiple accept="image/png,image/jpeg,image/webp" class="form-control" id="woundPhotos" /><div class="row g-2 mt-1" id="woundPhotoPreview"></div></div>
+</div>
+<div class="mt-3 d-flex gap-2"><button class="btn btn-primary">บันทึกข้อมูลทำแผล</button>@if(Model.Input.Id.HasValue){<a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>}</div>
+</form>
+</div></div></div>
+<div class="col-xl-5"><div class="card border-0 shadow-sm"><div class="card-body p-4">
+<h2 class="h4">รายการทำแผลล่าสุด</h2>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>วันที่</th><th>ผู้ป่วย</th><th>แผล</th><th></th></tr></thead><tbody>
+@foreach(var r in Model.Records){<tr><td>@r.VisitDate.ToString("dd/MM/yyyy HH:mm")</td><td>@r.Patient.FullName<br/><small>@r.CitizenId</small></td><td>@r.WoundLocation<br/><small>@r.Photos.Count รูป</small></td><td class="text-end"><a asp-action="Report" asp-route-id="@r.Id" class="btn btn-sm btn-outline-primary">รายงาน</a> <a asp-action="Edit" asp-route-id="@r.Id" class="btn btn-sm btn-outline-warning">แก้ไข</a><form asp-action="Delete" asp-route-id="@r.Id" method="post" class="d-inline" onsubmit="return confirm('ยืนยันการลบ?')">@Html.AntiForgeryToken()<button class="btn btn-sm btn-outline-danger">ลบ</button></form></td></tr>}
+</tbody></table></div>
+</div></div></div></div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script>
+const set=(id,v)=>{const e=document.getElementById(id);if(e&&v!==null&&v!==undefined)e.value=v};
+document.getElementById('woundOcr')?.addEventListener('click',async function(){
+ const file=document.getElementById('woundSource').files?.[0];if(!file){smartClinicStatusModal.show({type:'warning',state:'No file',stateDescription:'ยังไม่ได้เลือกเอกสาร',message:'กรุณาเลือกภาพหรือ PDF ก่อนอ่าน OCR',actionText:'ปิด'});return}
+ const fd=new FormData();fd.append('sourceDocument',file);const token=document.querySelector('#woundForm input[name="__RequestVerificationToken"]').value;this.disabled=true;
+ try{const res=await fetch('/WoundCare/AnalyzeDocument',{method:'POST',headers:{RequestVerificationToken:token},body:fd});const p=await res.json();if(!res.ok)throw new Error(p.error);const d=p.data;set('wcServiceId',d.serviceRecipientId);set('wcAuth',d.authenticationCode);set('wcCause',d.woundCause);set('wcLocation',d.woundLocation);set('wcSize',d.woundSize);set('wcTemp',d.temperatureCelsius);set('wcPulse',d.pulseRate);set('wcResp',d.respiratoryRate);set('wcSys',d.systolicPressure);set('wcDia',d.diastolicPressure);smartClinicStatusModal.show({type:'success',state:'OCR completed',stateDescription:'อ่านข้อมูลสำเร็จ',message:'ระบบเติมค่าที่อ่านได้แล้ว กรุณาตรวจทานก่อนบันทึก',actionText:'ตกลง'})}catch(e){smartClinicStatusModal.show({type:'danger',state:'OCR failed',stateDescription:'อ่านข้อมูลไม่สำเร็จ',message:e.message,actionText:'ปิด'})}finally{this.disabled=false}
+});
+document.getElementById('woundPhotos')?.addEventListener('change',function(){if(this.files.length>4){this.value='';smartClinicStatusModal.show({type:'warning',state:'Too many photos',stateDescription:'รูปเกินจำนวน',message:'อัปโหลดรูปแผลได้ไม่เกิน 4 รูป',actionText:'ปิด'});return}const box=document.getElementById('woundPhotoPreview');box.innerHTML='';[...this.files].forEach(f=>{const c=document.createElement('div');c.className='col-6';c.innerHTML=`<img class="img-fluid rounded border" src="${URL.createObjectURL(f)}" alt="รูปแผล"/>`;box.appendChild(c)})});
+</script>
+@if((TempData["StatusModal"] as string) is "wound-saved" or "wound-deleted"){<script>document.addEventListener('DOMContentLoaded',()=>smartClinicStatusModal.show({type:'success',state:'Completed',stateDescription:'ดำเนินการสำเร็จ',message:'ระบบบันทึกการเปลี่ยนแปลงเรียบร้อย',actionText:'ปิด'}));</script>}
+}

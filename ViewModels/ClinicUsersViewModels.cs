@@ -5,6 +5,11 @@ namespace SmartClinic.Web.ViewModels;
 public class CreateClinicUserViewModel
 {
     [Required]
+    [RegularExpression("^(นาย|นาง|นางสาว)$")]
+    [Display(Name = "คำนำหน้าชื่อ")]
+    public string NamePrefix { get; set; } = string.Empty;
+
+    [Required]
     [Display(Name = "ชื่อผู้ใช้")]
     public string UserName { get; set; } = string.Empty;
 
@@ -41,6 +46,8 @@ public class ClinicUserItemViewModel
 
     public string UserName { get; set; } = string.Empty;
 
+    public string NamePrefix { get; set; } = string.Empty;
+
     public string FullName { get; set; } = string.Empty;
 
     public string ClinicCode { get; set; } = string.Empty;
@@ -60,6 +67,38 @@ public class ClinicUserItemViewModel
     public bool CanDelete { get; set; }
 
     public bool MustChangePassword { get; set; }
+}
+
+public class EditClinicUserViewModel
+{
+    [Required]
+    public string Id { get; set; } = string.Empty;
+
+    [Required]
+    [RegularExpression("^(นาย|นาง|นางสาว)$")]
+    [Display(Name = "คำนำหน้าชื่อ")]
+    public string NamePrefix { get; set; } = string.Empty;
+
+    [Required]
+    [Display(Name = "ชื่อ-นามสกุล")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required]
+    [Phone]
+    [Display(Name = "เบอร์โทร")]
+    public string PhoneNumber { get; set; } = string.Empty;
+
+    [EmailAddress]
+    [Display(Name = "อีเมล")]
+    public string? Email { get; set; }
+
+    [Required]
+    [Display(Name = "บทบาท")]
+    public string RoleName { get; set; } = string.Empty;
+
+    public string? ProfessionalTitle { get; set; }
+
+    public string? LicenseNo { get; set; }
 }
 
 public class ClinicUsersDashboardViewModel

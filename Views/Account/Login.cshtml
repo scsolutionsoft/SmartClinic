@@ -3,11 +3,13 @@
     ViewData["Title"] = "Login";
 }
 
-<div class="row justify-content-center">
+<div class="row justify-content-center auth-shell">
     <div class="col-md-6 col-lg-5">
-        <div class="card shadow-sm border-0 mt-4">
+        <div class="card shadow-sm border-0 mt-4 auth-card">
             <div class="card-body p-4 p-lg-5">
-                <h1 class="h3 fw-semibold mb-3">เข้าสู่ระบบ Admin Clinic</h1>
+                <div class="auth-mark">SC</div>
+                <div class="text-uppercase text-primary small fw-bold mb-2">Secure clinic workspace</div>
+                <h1 class="h3 fw-bold mb-3">เข้าสู่ระบบ SmartClinic</h1>
                 <p class="text-body-secondary">ใช้รหัสคลินิกเป็นชื่อผู้ใช้ และรหัสผ่านเริ่มต้นจากเบอร์โทรผู้ลงทะเบียน</p>
                 <form asp-action="Login" method="post" class="mt-4">
                     @Html.AntiForgeryToken()
@@ -27,8 +29,10 @@
                         <input asp-for="RememberMe" class="form-check-input" />
                         <label asp-for="RememberMe" class="form-check-label"></label>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">เข้าสู่ระบบ</button>
                 </form>
+                <div class="text-center mt-3"><span class="text-body-secondary">ยังไม่มีบัญชี?</span> <a asp-controller="Access" asp-action="Register" class="fw-semibold">สมัครฟรี 30 รายการ OPD</a></div>
+                <div class="auth-security-note">ข้อมูลของคลินิกได้รับการแยกตามรหัสหน่วยบริการและสิทธิ์ผู้ใช้งาน</div>
             </div>
         </div>
     </div>

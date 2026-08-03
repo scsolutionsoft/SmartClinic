@@ -11,7 +11,8 @@ namespace SmartClinic.Web.Controllers;
 [Authorize(Roles = "SuperAdmin,AdminClinic")]
 public class ClinicUsersController : Controller
 {
-    private static readonly string[] DefaultRoleOptions = { "Nurse", "User" };
+    private const long MaxSignatureFileSize = 5 * 1024 * 1024;
+    private static readonly string[] DefaultRoleOptions = { "AdminClinic", "Nurse", "User" };
     private static readonly HashSet<string> AllowedSignatureExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png",
@@ -70,6 +71,7 @@ public class ClinicUsersController : Controller
         var newUser = new ApplicationUser
         {
             UserName = model.Input.UserName.Trim(),
+            NamePrefix = model.Input.NamePrefix.Trim(),
             FullName = model.Input.FullName.Trim(),
             PhoneNumber = model.Input.PhoneNumber.Trim(),
             Email = string.IsNullOrWhiteSpace(model.Input.Email) ? null : model.Input.Email.Trim(),
@@ -99,47 +101,67 @@ public class ClinicUsersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(
-        string id,
-        string fullName,
-        string phoneNumber,
-        string? email,
-        string roleName,
-        string? professionalTitle,
-        string? licenseNo)
+    public async Task<IActionResult> Edit(EditClinicUserViewModel model)
     {
         var currentUser = await userManager.GetUserAsync(User);
-        var target = await userManager.FindByIdAsync(id);
+        var target = await userManager.FindByIdAsync(model.Id);
         if (target is null || !CanManageUser(currentUser, target))
         {
             return NotFound();
         }
 
         var allowedRoles = User.IsInRole("SuperAdmin") ? new[] { "AdminClinic", "Nurse", "User" } : DefaultRoleOptions;
-        if (!allowedRoles.Contains(roleName, StringComparer.Ordinal))
+        if (!allowedRoles.Contains(model.RoleName, StringComparer.Ordinal))
         {
-            TempData["StatusMessage"] = "บทบาทที่เลือกไม่ถูกต้อง";
+            ModelState.AddModelError(nameof(model.RoleName), "บทบาทที่เลือกไม่ถูกต้อง");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            SetEditStatus(false, string.Join(" ", ModelState.Values
+                .SelectMany(x => x.Errors)
+                .Select(x => string.IsNullOrWhiteSpace(x.ErrorMessage) ? "ข้อมูลไม่ถูกต้อง" : x.ErrorMessage)
+                .Distinct()));
             return RedirectToAction(nameof(Index));
         }
 
-        target.FullName = fullName?.Trim();
-        target.PhoneNumber = phoneNumber?.Trim();
-        target.Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
-        target.ProfessionalTitle = professionalTitle?.Trim();
-        target.LicenseNo = licenseNo?.Trim();
+        target.NamePrefix = model.NamePrefix.Trim();
+        target.FullName = model.FullName.Trim();
+        target.PhoneNumber = model.PhoneNumber.Trim();
+        target.Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim();
+        target.ProfessionalTitle = string.IsNullOrWhiteSpace(model.ProfessionalTitle) ? null : model.ProfessionalTitle.Trim();
+        target.LicenseNo = string.IsNullOrWhiteSpace(model.LicenseNo) ? null : model.LicenseNo.Trim();
 
         var updateResult = await userManager.UpdateAsync(target);
         if (!updateResult.Succeeded)
         {
-            TempData["StatusMessage"] = string.Join(", ", updateResult.Errors.Select(x => x.Description));
+            SetEditStatus(false, string.Join(", ", updateResult.Errors.Select(x => x.Description)));
             return RedirectToAction(nameof(Index));
         }
 
         var roles = await userManager.GetRolesAsync(target);
-        await userManager.RemoveFromRolesAsync(target, roles);
-        await userManager.AddToRoleAsync(target, roleName);
+        if (!roles.Contains(model.RoleName, StringComparer.Ordinal))
+        {
+            var addRoleResult = await userManager.AddToRoleAsync(target, model.RoleName);
+            if (!addRoleResult.Succeeded)
+            {
+                SetEditStatus(false, string.Join(", ", addRoleResult.Errors.Select(x => x.Description)));
+                return RedirectToAction(nameof(Index));
+            }
 
-        TempData["StatusMessage"] = "แก้ไขข้อมูลผู้ใช้งานเรียบร้อย";
+            var obsoleteRoles = roles.Where(x => !string.Equals(x, model.RoleName, StringComparison.Ordinal)).ToArray();
+            if (obsoleteRoles.Length > 0)
+            {
+                var removeRoleResult = await userManager.RemoveFromRolesAsync(target, obsoleteRoles);
+                if (!removeRoleResult.Succeeded)
+                {
+                    SetEditStatus(false, string.Join(", ", removeRoleResult.Errors.Select(x => x.Description)));
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+        }
+
+        SetEditStatus(true, "แก้ไขข้อมูลผู้ใช้งานเรียบร้อย");
         return RedirectToAction(nameof(Index));
     }
 
@@ -174,14 +196,20 @@ public class ClinicUsersController : Controller
 
         if (signatureFile is null || signatureFile.Length == 0)
         {
-            TempData["StatusMessage"] = "กรุณาเลือกไฟล์ลายเซ็น";
+            SetProviderSignatureStatus(false, "กรุณาเลือกไฟล์ลายเซ็น");
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (signatureFile.Length > MaxSignatureFileSize)
+        {
+            SetProviderSignatureStatus(false, "ไฟล์ลายเซ็นต้องมีขนาดไม่เกิน 5 MB");
             return RedirectToAction(nameof(Index));
         }
 
         var extension = Path.GetExtension(signatureFile.FileName);
         if (!AllowedSignatureExtensions.Contains(extension))
         {
-            TempData["StatusMessage"] = "รองรับเฉพาะไฟล์ .png .jpg .jpeg .webp";
+            SetProviderSignatureStatus(false, "รองรับเฉพาะไฟล์ .png .jpg .jpeg .webp");
             return RedirectToAction(nameof(Index));
         }
 
@@ -192,8 +220,65 @@ public class ClinicUsersController : Controller
         target.ProviderSignatureImageData = stream.ToArray();
         target.ProviderSignatureUploadedAtUtc = DateTime.UtcNow;
 
-        await userManager.UpdateAsync(target);
-        TempData["StatusMessage"] = "อัปโหลดลายเซ็นผู้ให้บริการเรียบร้อย";
+        var updateResult = await userManager.UpdateAsync(target);
+        SetProviderSignatureStatus(
+            updateResult.Succeeded,
+            updateResult.Succeeded
+                ? "อัปโหลดลายเซ็นผู้ให้บริการเรียบร้อย"
+                : string.Join(", ", updateResult.Errors.Select(x => x.Description)));
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CaptureProviderSignature(string id, string signatureData)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        var target = await userManager.FindByIdAsync(id);
+        if (target is null || !CanManageUser(currentUser, target))
+        {
+            return NotFound();
+        }
+
+        const string pngPrefix = "data:image/png;base64,";
+        if (string.IsNullOrWhiteSpace(signatureData) ||
+            !signatureData.StartsWith(pngPrefix, StringComparison.Ordinal))
+        {
+            SetProviderSignatureStatus(false, "ไม่พบข้อมูลลายเซ็น PNG");
+            return RedirectToAction(nameof(Index));
+        }
+
+        byte[] imageData;
+        try
+        {
+            imageData = Convert.FromBase64String(signatureData[pngPrefix.Length..]);
+        }
+        catch (FormatException)
+        {
+            SetProviderSignatureStatus(false, "ข้อมูลภาพลายเซ็นไม่ถูกต้อง");
+            return RedirectToAction(nameof(Index));
+        }
+
+        var pngHeader = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        if (imageData.Length == 0 ||
+            imageData.Length > MaxSignatureFileSize ||
+            imageData.Length < pngHeader.Length ||
+            !imageData.AsSpan(0, pngHeader.Length).SequenceEqual(pngHeader))
+        {
+            SetProviderSignatureStatus(false, "ไฟล์ลายเซ็น PNG ไม่ถูกต้องหรือมีขนาดเกิน 5 MB");
+            return RedirectToAction(nameof(Index));
+        }
+
+        target.ProviderSignatureFileName = $"{target.UserName}.png";
+        target.ProviderSignatureContentType = "image/png";
+        target.ProviderSignatureImageData = imageData;
+        target.ProviderSignatureUploadedAtUtc = DateTime.UtcNow;
+        var result = await userManager.UpdateAsync(target);
+        SetProviderSignatureStatus(
+            result.Succeeded,
+            result.Succeeded
+                ? "บันทึกลายเซ็นผู้ให้บริการเรียบร้อย"
+                : string.Join(", ", result.Errors.Select(x => x.Description)));
         return RedirectToAction(nameof(Index));
     }
 
@@ -236,6 +321,7 @@ public class ClinicUsersController : Controller
             {
                 Id = user.Id,
                 UserName = user.UserName ?? string.Empty,
+                NamePrefix = user.NamePrefix ?? string.Empty,
                 FullName = user.FullName ?? string.Empty,
                 ClinicCode = user.ClinicCode ?? "-",
                 PhoneNumber = user.PhoneNumber ?? "-",
@@ -277,5 +363,17 @@ public class ClinicUsersController : Controller
 
         return !string.IsNullOrWhiteSpace(currentUser.ClinicCode) &&
             string.Equals(currentUser.ClinicCode, target.ClinicCode, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SetEditStatus(bool succeeded, string message)
+    {
+        TempData["StatusModal"] = succeeded ? "clinic-user-edited" : "clinic-user-edit-error";
+        TempData["StatusMessage"] = message;
+    }
+
+    private void SetProviderSignatureStatus(bool succeeded, string message)
+    {
+        TempData["StatusModal"] = succeeded ? "provider-signature-saved" : "provider-signature-error";
+        TempData["StatusMessage"] = message;
     }
 }

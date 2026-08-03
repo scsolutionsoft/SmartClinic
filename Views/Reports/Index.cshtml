@@ -6,16 +6,17 @@
 <section class="hero-panel p-4 p-lg-5 mb-4 rounded-4 text-white">
     <div class="row align-items-center g-4">
         <div class="col-lg-8">
-            <span class="badge bg-light text-dark mb-3">Phase 5</span>
+            <span class="hero-symbol mb-3" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14H3V5a2 2 0 0 1 2-2Zm2 12h2V9H7v6Zm4 0h2V6h-2v9Zm4 0h2v-3h-2v3Z"/></svg></span>
             <h1 class="display-5 fw-semibold mb-3">รายงานประวัติการเข้ารักษา</h1>
             <p class="lead mb-0">ค้นหา, สรุปผล, และพิมพ์รายงาน OPD ที่มีลายเซ็นผู้รับบริการได้จากหน้าเดียว</p>
         </div>
         <div class="col-lg-4">
             <div class="glass-card p-3 p-lg-4 rounded-4">
-                <div class="fw-semibold mb-2">Summary</div>
-                <div class="small opacity-75">- Total visits: @Model.TotalVisits</div>
-                <div class="small opacity-75">- Signed visits: @Model.SignedVisits</div>
-                <div class="small opacity-75">- Unique patients: @Model.UniquePatients</div>
+                <div class="hero-mini-stats">
+                    <span><strong>@Model.TotalVisits</strong><small>ครั้งรักษา</small></span>
+                    <span><strong>@Model.SignedVisits</strong><small>มีลายเซ็น</small></span>
+                    <span><strong>@Model.UniquePatients</strong><small>ผู้ป่วย</small></span>
+                </div>
             </div>
         </div>
     </div>
@@ -24,17 +25,32 @@
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-4">
         <form method="get" asp-controller="Reports" asp-action="Index" class="row g-3 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label asp-for="Filter.DateFrom" class="form-label">วันที่เริ่มต้น</label>
                 <input asp-for="Filter.DateFrom" type="date" class="form-control" name="dateFrom" />
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label asp-for="Filter.DateTo" class="form-label">วันที่สิ้นสุด</label>
                 <input asp-for="Filter.DateTo" type="date" class="form-control" name="dateTo" />
             </div>
-            <div class="col-md-4 d-flex gap-2">
+            <div class="col-md-4">
+                <label asp-for="Filter.SearchTerm" class="form-label">ค้นหาข้อมูลผู้ป่วย</label>
+                <input asp-for="Filter.SearchTerm"
+                       name="search"
+                       class="form-control"
+                       placeholder="ชื่อ-นามสกุล หรือเลขบัตรประชาชน"
+                       autocomplete="off" />
+            </div>
+            <div class="col-md-2 d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn btn-primary">ค้นหารายงาน</button>
                 <button type="button" class="btn btn-outline-secondary" onclick="window.print()">พิมพ์หน้านี้</button>
+                @if (!string.IsNullOrWhiteSpace(Model.Filter.SearchTerm))
+                {
+                    <a asp-action="Index"
+                       asp-route-dateFrom="@Model.Filter.DateFrom.ToString("yyyy-MM-dd")"
+                       asp-route-dateTo="@Model.Filter.DateTo.ToString("yyyy-MM-dd")"
+                       class="btn btn-outline-secondary">ล้างตัวกรอง</a>
+                }
             </div>
         </form>
     </div>
@@ -43,9 +59,10 @@
 <div class="card shadow-sm border-0 report-print-area">
     <div class="card-body p-4">
         <div class="table-responsive">
-            <table class="table align-middle">
+            <table class="table align-middle report-results-table">
                 <thead>
                     <tr>
+                        <th class="text-center">#</th>
                         <th>วันที่รักษา</th>
                         <th>ผู้ป่วย</th>
                         <th>เลขบัตร</th>
@@ -55,9 +72,13 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @{ var reportIndex = 1; }
                     @foreach (var item in Model.Items)
                     {
                         <tr>
+                            <td class="text-center">
+                                <span class="report-row-rank">@reportIndex</span>
+                            </td>
                             <td>@item.VisitDateText</td>
                             <td class="fw-semibold">@item.PatientName</td>
                             <td>@item.CitizenId</td>
@@ -76,11 +97,15 @@
                                 <a class="btn btn-outline-primary btn-sm" asp-controller="MedicalRecords" asp-action="Report" asp-route-id="@item.RecordId">เปิดรายงาน</a>
                             </td>
                         </tr>
+
+                        reportIndex++;
                     }
                     @if (!Model.Items.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center text-body-secondary py-4">ไม่พบข้อมูลในช่วงวันที่ที่เลือก</td>
+                            <td colspan="7" class="text-center text-body-secondary py-4">
+                                @(string.IsNullOrWhiteSpace(Model.Filter.SearchTerm) ? "ไม่พบข้อมูลในช่วงวันที่ที่เลือก" : "ไม่พบข้อมูลผู้ป่วยที่ค้นหาในช่วงวันที่ที่เลือก")
+                            </td>
                         </tr>
                     }
                 </tbody>

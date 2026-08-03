@@ -1,6 +1,167 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@model PrivacyNoticeViewModel
+@{
+    ViewData["Title"] = "ประกาศความเป็นส่วนตัวสำหรับผู้ป่วย";
+    string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "โปรดติดต่อคลินิก" : value;
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<section class="pdpa-hero mb-4">
+    <div class="pdpa-hero-brand">
+        @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+        {
+            <div class="pdpa-logo-frame">
+                <img src="@Model.LogoUrl" alt="โลโก้ @Model.ClinicName" />
+            </div>
+        }
+        <div>
+            <span class="pdpa-kicker">PATIENT PRIVACY NOTICE · PDPA</span>
+            <h1>ประกาศความเป็นส่วนตัวสำหรับผู้ป่วย</h1>
+            <p>@Model.ClinicName ให้ความสำคัญกับข้อมูลส่วนบุคคลและข้อมูลสุขภาพของท่าน เราจะเก็บ ใช้ หรือเปิดเผยข้อมูลเท่าที่จำเป็น ปลอดภัย และสอดคล้องกับกฎหมาย</p>
+        </div>
+    </div>
+    <div class="pdpa-version">
+        <span>ฉบับปัจจุบัน</span>
+        <strong>@Model.LastUpdatedText</strong>
+        <small>รหัสคลินิก @Model.ClinicCode</small>
+    </div>
+</section>
+
+<div class="pdpa-summary mb-4">
+    <div><span class="pdpa-summary-icon">01</span><strong>ใช้เพื่อดูแลรักษา</strong><small>เวชระเบียน การวินิจฉัย การรักษา และการส่งต่อ</small></div>
+    <div><span class="pdpa-summary-icon">02</span><strong>จำกัดผู้เข้าถึง</strong><small>เฉพาะบุคลากรและหน่วยงานที่จำเป็นตามหน้าที่</small></div>
+    <div><span class="pdpa-summary-icon">03</span><strong>ท่านมีสิทธิ</strong><small>ขอเข้าถึง แก้ไข คัดค้าน จำกัด หรือลบเมื่อกฎหมายอนุญาต</small></div>
+</div>
+
+<div class="row g-4 align-items-start">
+    <div class="col-xl-3">
+        <aside class="pdpa-nav-card">
+            <div class="pdpa-nav-title">สารบัญ</div>
+            <nav aria-label="สารบัญประกาศความเป็นส่วนตัว">
+                <a href="#controller">1. ผู้ควบคุมข้อมูล</a>
+                <a href="#data">2. ข้อมูลที่เก็บรวบรวม</a>
+                <a href="#purpose">3. วัตถุประสงค์และฐานกฎหมาย</a>
+                <a href="#disclosure">4. การเปิดเผยข้อมูล</a>
+                <a href="#retention">5. ระยะเวลาและความปลอดภัย</a>
+                <a href="#rights">6. สิทธิของผู้ป่วย</a>
+                <a href="#contact">7. ช่องทางติดต่อ</a>
+            </nav>
+            <div class="pdpa-nav-note">
+                <strong>ข้อมูลสุขภาพเป็นข้อมูลอ่อนไหว</strong>
+                <span>คลินิกประมวลผลภายใต้เงื่อนไขที่กฎหมายอนุญาตและมาตรการรักษาความลับทางการแพทย์</span>
+            </div>
+        </aside>
+    </div>
+
+    <div class="col-xl-9">
+        <main class="pdpa-content">
+            <section id="controller" class="pdpa-section">
+                <div class="pdpa-section-number">01</div>
+                <div>
+                    <h2>ผู้ควบคุมข้อมูลส่วนบุคคล</h2>
+                    <p><strong>@Model.ClinicName</strong> เป็นผู้ควบคุมข้อมูลส่วนบุคคลสำหรับการให้บริการของคลินิก โดยมีรายละเอียดติดต่อดังนี้</p>
+                    <div class="pdpa-contact-grid">
+                        <div><span>ที่อยู่</span><strong>@Display(Model.Address)</strong></div>
+                        <div><span>โทรศัพท์</span><strong>@Display(Model.PhoneNumber)</strong></div>
+                        <div><span>อีเมล</span><strong>@Display(Model.Email)</strong></div>
+                        <div><span>ผู้ประสานงาน PDPA / DPO</span><strong>ติดต่อผ่านช่องทางของคลินิกข้างต้น</strong></div>
+                    </div>
+                    <p class="pdpa-muted">ประกาศนี้ใช้กับผู้ป่วย ผู้รับบริการ ผู้แทนโดยชอบธรรม ผู้ปกครอง และบุคคลที่ติดต่อเกี่ยวกับการรักษา</p>
+                </div>
+            </section>
+
+            <section id="data" class="pdpa-section">
+                <div class="pdpa-section-number">02</div>
+                <div>
+                    <h2>ข้อมูลที่เราเก็บรวบรวม</h2>
+                    <div class="pdpa-info-grid">
+                        <article><h3>ข้อมูลระบุตัวตน</h3><p>ชื่อ นามสกุล เลขบัตรประชาชน วันเกิด เพศ รูปถ่าย ลายมือชื่อ และเลขประจำตัวผู้รับบริการ</p></article>
+                        <article><h3>ข้อมูลติดต่อและสิทธิ</h3><p>ที่อยู่ โทรศัพท์ อีเมล ผู้ติดต่อฉุกเฉิน สิทธิการรักษา และหน่วยบริการประจำ</p></article>
+                        <article class="sensitive"><h3>ข้อมูลสุขภาพ (ข้อมูลอ่อนไหว)</h3><p>อาการ ประวัติสุขภาพ ผลตรวจ การวินิจฉัย ยา การแพ้ การทำแผล ภาพบาดแผล การรักษา และเอกสารทางการแพทย์</p></article>
+                        <article><h3>ข้อมูลการใช้ระบบ</h3><p>บัญชีผู้บันทึก วันเวลา Authentication Code ไฟล์ที่อัปโหลด และบันทึกการเข้าถึงที่จำเป็นต่อความปลอดภัย</p></article>
+                    </div>
+                    <p>เราอาจได้รับข้อมูลจากท่านโดยตรง บัตรประชาชนหรือเอกสารที่ท่านให้ บุคลากรทางการแพทย์ สถานพยาบาลที่ส่งต่อ หน่วยงานสิทธิการรักษา หรือหน่วยงานรัฐที่มีอำนาจตามกฎหมาย</p>
+                </div>
+            </section>
+
+            <section id="purpose" class="pdpa-section">
+                <div class="pdpa-section-number">03</div>
+                <div>
+                    <h2>วัตถุประสงค์และฐานกฎหมาย</h2>
+                    <ul class="pdpa-purpose-list">
+                        <li><strong>ให้บริการสุขภาพ:</strong> ลงทะเบียน ยืนยันตัวตน ประเมิน วินิจฉัย รักษา ทำแผล จ่ายยา ติดตาม และส่งต่อผู้ป่วย</li>
+                        <li><strong>บริหารสิทธิและค่าใช้จ่าย:</strong> ตรวจสอบสิทธิ เบิกจ่าย จัดทำรายงาน และติดต่อหน่วยบริการหรือหน่วยงานที่เกี่ยวข้อง</li>
+                        <li><strong>คุณภาพและความปลอดภัย:</strong> ตรวจสอบมาตรฐานบริการ ป้องกันเหตุอันตราย รักษาความมั่นคงปลอดภัย และตรวจสอบการใช้งานโดยมิชอบ</li>
+                        <li><strong>หน้าที่ตามกฎหมาย:</strong> จัดทำและเก็บเวชระเบียน ให้ข้อมูลแก่หน่วยงานที่มีอำนาจ และปฏิบัติตามกฎหมายสาธารณสุขหรือกฎหมายอื่นที่เกี่ยวข้อง</li>
+                    </ul>
+                    <div class="pdpa-law-box">
+                        <strong>ฐานกฎหมายที่อาจใช้</strong>
+                        <p>การปฏิบัติตามสัญญาหรือคำขอก่อนรับบริการ หน้าที่ตามกฎหมาย ประโยชน์สำคัญต่อชีวิต ภารกิจเพื่อประโยชน์สาธารณะ ประโยชน์โดยชอบด้วยกฎหมาย ความยินยอมเมื่อจำเป็น และข้อยกเว้นสำหรับข้อมูลสุขภาพเพื่อการวินิจฉัย การให้บริการหรือการบริหารจัดการด้านสุขภาพภายใต้หน้าที่รักษาความลับ ทั้งนี้เลือกใช้ตามข้อเท็จจริงของแต่ละกิจกรรม</p>
+                    </div>
+                    <p class="pdpa-muted">หากข้อมูลจำเป็นต่อการยืนยันตัวตน การรักษา หรือการปฏิบัติตามกฎหมาย แต่ท่านไม่ให้ข้อมูล คลินิกอาจไม่สามารถให้บริการบางส่วน ตรวจสอบสิทธิ หรือจัดทำเอกสารที่จำเป็นได้</p>
+                </div>
+            </section>
+
+            <section id="disclosure" class="pdpa-section">
+                <div class="pdpa-section-number">04</div>
+                <div>
+                    <h2>บุคคลหรือหน่วยงานที่อาจได้รับข้อมูล</h2>
+                    <p>คลินิกจะเปิดเผยข้อมูลเท่าที่จำเป็นแก่บุคลากรที่เกี่ยวข้อง สถานพยาบาลหรือหน่วยรับส่งต่อ สำนักงานหลักประกันสุขภาพแห่งชาติหรือผู้ดูแลสิทธิ หน่วยงานสาธารณสุข บริษัทผู้ให้บริการระบบที่มีข้อตกลงคุ้มครองข้อมูล ผู้ตรวจสอบ และหน่วยงานที่มีอำนาจตามกฎหมาย</p>
+                    <p>เราไม่ขายข้อมูลผู้ป่วยและไม่ใช้ข้อมูลสุขภาพเพื่อโฆษณาเฉพาะบุคคล หากต้องส่งข้อมูลไปต่างประเทศ จะดำเนินการเมื่อมีกฎหมายรองรับและมีมาตรการคุ้มครองที่เหมาะสม</p>
+                </div>
+            </section>
+
+            <section id="retention" class="pdpa-section">
+                <div class="pdpa-section-number">05</div>
+                <div>
+                    <h2>ระยะเวลาเก็บรักษาและความมั่นคงปลอดภัย</h2>
+                    <p>คลินิกเก็บข้อมูลตลอดระยะเวลาที่จำเป็นต่อการรักษา การติดตาม สิทธิเรียกร้อง และตามระยะเวลาที่กฎหมายหรือมาตรฐานวิชาชีพกำหนด เมื่อหมดความจำเป็นจะลบ ทำลาย หรือทำให้ไม่สามารถระบุตัวบุคคลได้อย่างเหมาะสม</p>
+                    <div class="pdpa-security-row">
+                        <span>แยกข้อมูลตามรหัสคลินิก</span>
+                        <span>กำหนดสิทธิ์ตามบทบาท</span>
+                        <span>ยืนยันตัวตนผู้ใช้งาน</span>
+                        <span>สำรองและป้องกันระบบ</span>
+                        <span>ควบคุมผู้ให้บริการภายนอก</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="rights" class="pdpa-section">
+                <div class="pdpa-section-number">06</div>
+                <div>
+                    <h2>สิทธิของผู้ป่วยและเจ้าของข้อมูล</h2>
+                    <p>ภายใต้เงื่อนไขของกฎหมาย ท่านอาจขอใช้สิทธิดังต่อไปนี้ คลินิกอาจขอข้อมูลเพื่อยืนยันตัวตนก่อนดำเนินการ</p>
+                    <div class="pdpa-rights-grid">
+                        <div><strong>เข้าถึงและขอสำเนา</strong><span>ตรวจสอบข้อมูลและที่มาของข้อมูล</span></div>
+                        <div><strong>แก้ไขข้อมูล</strong><span>ให้ถูกต้อง เป็นปัจจุบัน และไม่ก่อให้เกิดความเข้าใจผิด</span></div>
+                        <div><strong>ลบหรือทำลาย</strong><span>เมื่อไม่มีฐานกฎหมายหรือความจำเป็นต้องเก็บต่อ</span></div>
+                        <div><strong>จำกัดการใช้</strong><span>ระงับการประมวลผลในกรณีที่กฎหมายกำหนด</span></div>
+                        <div><strong>คัดค้าน</strong><span>คัดค้านการประมวลผลบางประเภท</span></div>
+                        <div><strong>โอนข้อมูล</strong><span>สำหรับข้อมูลที่อยู่ในรูปแบบที่กฎหมายรองรับ</span></div>
+                        <div><strong>ถอนความยินยอม</strong><span>ได้ทุกเมื่อ โดยไม่กระทบการดำเนินการก่อนถอน</span></div>
+                        <div><strong>ร้องเรียน</strong><span>ต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล</span></div>
+                    </div>
+                    <div class="pdpa-alert">สิทธิบางรายการอาจถูกจำกัดเมื่อคลินิกจำเป็นต้องเก็บหรือใช้ข้อมูลเพื่อการรักษา ป้องกันอันตราย ปฏิบัติตามกฎหมาย ใช้สิทธิเรียกร้อง หรือประโยชน์สาธารณะ โดยคลินิกจะแจ้งเหตุผลเมื่อไม่สามารถดำเนินการตามคำขอได้</div>
+                </div>
+            </section>
+
+            <section id="contact" class="pdpa-section pdpa-contact-section">
+                <div class="pdpa-section-number">07</div>
+                <div>
+                    <h2>การติดต่อ ใช้สิทธิ หรือแจ้งเหตุข้อมูลส่วนบุคคล</h2>
+                    <p>ส่งคำขอพร้อมชื่อ ช่องทางติดต่อ รายละเอียดสิทธิที่ต้องการใช้ และเอกสารยืนยันตัวตนที่เหมาะสมมายังคลินิก</p>
+                    <div class="pdpa-contact-actions">
+                        @if (!string.IsNullOrWhiteSpace(Model.PhoneNumber))
+                        {
+                            <a href="tel:@Model.PhoneNumber">โทร @Model.PhoneNumber</a>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.Email))
+                        {
+                            <a href="mailto:@Model.Email">อีเมล @Model.Email</a>
+                        }
+                        <a href="https://www.pdpc.or.th/" target="_blank" rel="noopener">สำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล</a>
+                    </div>
+                    <p class="pdpa-muted mb-0">คลินิกอาจปรับปรุงประกาศนี้เมื่อแนวทางการให้บริการหรือกฎหมายเปลี่ยนแปลง โดยจะแสดงฉบับล่าสุดบนหน้านี้</p>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>

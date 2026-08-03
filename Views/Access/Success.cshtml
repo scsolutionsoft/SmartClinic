@@ -1,0 +1,14 @@
+@model SignupSuccessViewModel
+@{ ViewData["Title"] = "สมัครใช้งานสำเร็จ"; }
+<div class="signup-success-shell">
+    <div class="signup-success-card">
+        <div class="success-check">✓</div><span class="section-kicker">ACCOUNT READY</span>
+        <h1>พื้นที่ทำงานของ @Model.ClinicName พร้อมแล้ว</h1>
+        <p>บันทึกข้อมูลบัญชีนี้ไว้ในที่ปลอดภัย รหัสผ่านชั่วคราวจะแสดงในหน้านี้เพียงครั้งเดียว</p>
+        <div class="credential-box"><label>Username</label><strong id="signupUsername">@Model.UserName</strong><button type="button" data-copy="#signupUsername">คัดลอก</button></div>
+        <div class="credential-box"><label>รหัสผ่านชั่วคราว</label><strong id="signupPassword">@Model.TemporaryPassword</strong><button type="button" data-copy="#signupPassword">คัดลอก</button></div>
+        <div class="quota-welcome"><span>เครดิตเริ่มต้น</span><strong>@Model.PatientLimit รายการ OPD</strong><small>เครดิตจะถูกใช้เมื่อสร้างเวชระเบียน OPD ใหม่ · ติดต่อเติมเครดิตหรือเปลี่ยนเป็น Unlimited ได้ภายหลัง</small></div>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-primary btn-lg w-100">เข้าสู่ระบบและเปลี่ยนรหัสผ่าน</a>
+    </div>
+</div>
+<script>document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{const e=document.querySelector(b.dataset.copy);await navigator.clipboard.writeText(e.textContent.trim());b.textContent='คัดลอกแล้ว'}));</script>

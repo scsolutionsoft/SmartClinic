@@ -8,6 +8,17 @@
 
   <ItemGroup>
     <Compile Remove="BridgePackageSource\**\*.cs" />
+    <Compile Remove="artifacts\**\*.cs" />
+    <Content Remove="BridgePackageSource\**\*" />
+    <None Remove="BridgePackageSource\**\*" />
+    <Content Remove="artifacts\**\*" />
+    <None Remove="artifacts\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="tessdata\*.traineddata" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Data\SeedData\icd102019enMeta.zip" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Data\SeedData\icd10tm2019-update-202405.xlsx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,6 +29,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="PdfPig" Version="0.1.15" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
 
 </Project>

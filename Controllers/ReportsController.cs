@@ -21,16 +21,26 @@ public class ReportsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(DateTime? dateFrom = null, DateTime? dateTo = null)
+    public async Task<IActionResult> Index(DateTime? dateFrom = null, DateTime? dateTo = null, string? search = null)
     {
         var clinicCode = await GetClinicCode();
         var fromDate = (dateFrom ?? DateTime.Today.AddDays(-30)).Date;
         var toDate = (dateTo ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
+        var normalizedSearch = search?.Trim();
 
-        var records = await dbContext.TreatmentRecords
+        var recordsQuery = dbContext.TreatmentRecords
             .AsNoTracking()
             .Include(x => x.Patient)
-            .Where(x => x.ClinicCode == clinicCode && x.VisitDate >= fromDate && x.VisitDate <= toDate)
+            .Where(x => x.ClinicCode == clinicCode && x.VisitDate >= fromDate && x.VisitDate <= toDate);
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            recordsQuery = recordsQuery.Where(x =>
+                x.Patient.FullName.Contains(normalizedSearch) ||
+                x.Patient.CitizenId.Contains(normalizedSearch));
+        }
+
+        var records = await recordsQuery
             .OrderByDescending(x => x.VisitDate)
             .Take(300)
             .Select(x => new
@@ -71,7 +81,8 @@ public class ReportsController : Controller
             Filter = new ReportFilterViewModel
             {
                 DateFrom = fromDate,
-                DateTo = toDate.Date
+                DateTo = toDate.Date,
+                SearchTerm = normalizedSearch ?? string.Empty
             },
             Items = items,
             TotalVisits = items.Count,

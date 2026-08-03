@@ -9,6 +9,7 @@
 ## Build output
 bin/
 obj/
+artifacts/
 BridgePackageSource/**/bin/
 BridgePackageSource/**/obj/
 BridgePackageStage/

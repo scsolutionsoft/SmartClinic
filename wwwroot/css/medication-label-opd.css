@@ -1,0 +1,39 @@
+.workflow-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .8rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid #e2ebee;
+}
+
+.workflow-selector label { cursor: pointer; }
+.workflow-selector input { position: absolute; opacity: 0; }
+.workflow-selector span { display: flex; min-height: 78px; justify-content: center; flex-direction: column; padding: .9rem 1rem; border: 1px solid #d8e5e8; border-radius: 14px; background: #fbfdfd; transition: .16s ease; }
+.workflow-selector input:checked + span { border-color: #138fa2; background: #ebf9fa; box-shadow: inset 0 0 0 1px #138fa2, 0 6px 18px rgba(8, 122, 140, .08); }
+.workflow-selector strong { color: #173b47; font-size: .9rem; }
+.workflow-selector small { margin-top: .2rem; color: #71858c; font-size: .72rem; }
+
+.opd-medicine-state { margin-top: 1rem; padding: 1rem; border: 1px dashed #b9cbd0; border-radius: 12px; background: #f8fbfc; color: #6b8088; text-align: center; font-size: .8rem; }
+.opd-medicine-list { display: grid; gap: .6rem; margin-top: 1rem; }
+.opd-medicine-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px; align-items: center; gap: 1rem; padding: .8rem .9rem; border: 1px solid #dce7ea; border-radius: 12px; background: #fbfdfd; }
+.opd-medicine-row > div { min-width: 0; }
+.opd-medicine-row strong { display: block; overflow: hidden; color: #173b47; font-size: .82rem; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.opd-medicine-row small { display: block; margin-top: .2rem; overflow: hidden; color: #71858c; font-size: .68rem; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+
+.opd-slot-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.2rem; }
+.opd-slot-heading strong,.opd-slot-heading small { display: block; }
+.opd-slot-heading strong { color: #173b47; font-size: .85rem; }
+.opd-slot-heading small { margin-top: .15rem; color: #758990; font-size: .68rem; }
+.opd-slot-board { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, 62px); gap: 7px; margin-top: .7rem; }
+.opd-slot-board > div { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: .55rem; min-width: 0; padding: .55rem; border: 1px dashed #aebfc5; border-radius: 9px; background: #fafcfc; color: #7b8e95; }
+.opd-slot-board b { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; background: #e9f0f2; color: #5d747c; font-size: .72rem; }
+.opd-slot-board span { overflow: hidden; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+.opd-slot-board > div.occupied { border-style: solid; border-color: #3da7b5; background: #edf9fa; color: #0b7180; box-shadow: 0 3px 10px rgba(11, 113, 128, .08); }
+.opd-slot-board > div.occupied b { background: #108da0; color: #fff; }
+
+@media (max-width: 700px) {
+  .workflow-selector { grid-template-columns: 1fr; }
+  .opd-medicine-row { grid-template-columns: 1fr; gap: .55rem; }
+  .opd-medicine-row select { width: 100%; }
+}

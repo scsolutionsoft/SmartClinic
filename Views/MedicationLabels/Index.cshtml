@@ -1,0 +1,186 @@
+@model MedicationLabelsDashboardViewModel
+@{ ViewData["Title"] = "ฉลากยา A15"; }
+<link rel="stylesheet" href="~/css/medication-label-opd.css" asp-append-version="true" />
+<div class="med-label-page">
+<header class="med-label-hero"><div class="med-label-hero-copy"><span>MEDICATION LABEL · A15</span><h1>ออกแบบและพิมพ์ฉลากยา</h1><p>ฉลาก 8 × 5 ซม. · 8 ดวงต่อแผ่น · กระดาษ 17.5 × 21.2 ซม.</p></div><div class="med-clinic-chip"><small>ข้อมูลบนฉลาก</small><strong>@Model.ClinicName</strong><span>@(string.IsNullOrWhiteSpace(Model.OpeningHours) ? "กรุณากำหนดเวลาทำการในหน้าข้อมูลคลินิก" : Model.OpeningHours)</span></div></header>
+
+<div class="med-label-layout">
+<aside class="med-template-panel"><div class="panel-heading"><div><span>DISEASE TEMPLATES</span><h2>คลังฉลากตามประเภทโรค</h2></div><a asp-action="Index" class="btn btn-sm btn-outline-primary">ฉลากใหม่</a></div>
+    <div class="med-template-list">
+    @foreach(var group in Model.Templates.GroupBy(x=>x.DiseaseCategory))
+    {<section><h3>@group.Key</h3>@foreach(var t in group){<div class="med-template-item"><a asp-action="Index" asp-route-templateId="@t.Id"><strong>@t.TemplateName</strong><small>@(string.IsNullOrWhiteSpace(t.MedicineName)?"ฉลากเปล่า":t.MedicineName)</small></a><form asp-action="DeleteTemplate" method="post" onsubmit="return confirm('ลบแม่แบบนี้?')"><input type="hidden" name="id" value="@t.Id"/><button title="ลบ">×</button></form></div>}</section>}
+    @if(Model.Templates.Count==0){<div class="empty-template">ยังไม่มีแม่แบบ<br/>กรอกข้อมูลแล้วกด “บันทึกแม่แบบ”</div>}
+    </div>
+</aside>
+
+<main class="med-editor-panel">
+<form method="post" id="labelForm">
+@Html.AntiForgeryToken()<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<input asp-for="Input.TemplateId" type="hidden"/>
+<input asp-for="Input.OpdSlotAssignmentsJson" type="hidden" id="opdAssignments"/>
+<div class="workflow-selector">
+    <label><input asp-for="Input.PrintMode" type="radio" value="manual"/><span><strong>สร้างฉลากเอง</strong><small>กรอกข้อมูลหรือใช้แม่แบบเดิม</small></span></label>
+    <label><input asp-for="Input.PrintMode" type="radio" value="opd"/><span><strong>พิมพ์จากรายการยา OPD</strong><small>เลือกยาแต่ละตัวและกำหนดตำแหน่ง 1–8</small></span></label>
+</div>
+<div class="manual-workflow">
+<div class="mode-selector"><label><input asp-for="Input.BlankMode" type="radio" value="false" checked="@(!Model.Input.BlankMode)"/><span><strong>กรอกเฉพาะช่องที่ต้องการ</strong><small>ช่องที่เว้นว่างจะแสดงเป็นเส้นสำหรับเขียนมือ</small></span></label><label><input asp-for="Input.BlankMode" type="radio" value="true" checked="@(Model.Input.BlankMode)"/><span><strong>ฉลากเปล่า</strong><small>พิมพ์แบบฟอร์มโดยไม่ใส่ข้อมูล</small></span></label></div>
+
+<section class="label-form-section template-fields"><h2>ข้อมูลแม่แบบ</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">ประเภท/ชื่อโรค</label><input asp-for="Input.DiseaseCategory" class="form-control" placeholder="เช่น ไข้หวัด, ปวดกล้ามเนื้อ"/></div><div class="col-md-6"><label class="form-label">ชื่อแม่แบบ</label><input asp-for="Input.TemplateName" class="form-control" placeholder="เช่น Paracetamol สำหรับผู้ใหญ่"/></div></div></section>
+<section class="label-form-section fill-fields"><h2>ข้อมูลบนฉลาก</h2><div class="row g-3"><div class="col-md-7"><label class="form-label">ผู้ป่วย</label><select asp-for="Input.PatientId" class="form-select"><option value="">เว้นว่างเพื่อเขียนมือ</option>@foreach(var p in Model.Patients){<option value="@p.Id">@p.FullName · @p.CitizenId</option>}</select></div><div class="col-md-5"><label class="form-label">วันที่</label><input asp-for="Input.LabelDate" type="date" class="form-control"/></div><div class="col-12"><label class="form-label">ชื่อยา / สรรพคุณ</label><input asp-for="Input.MedicineName" class="form-control"/></div><div class="col-md-4"><label class="form-label">ครั้งละ</label><input asp-for="Input.DoseAmount" class="form-control" placeholder="เช่น 1 เม็ด"/></div><div class="col-md-4"><label class="form-label">วันละ</label><input asp-for="Input.FrequencyPerDay" class="form-control" placeholder="เช่น 3 ครั้ง"/></div><div class="col-md-4"><label class="form-label">เวลาอาหาร</label><select asp-for="Input.MealTiming" class="form-select"><option value="">ไม่ระบุ</option><option>ก่อนอาหาร</option><option>หลังอาหาร</option></select></div></div>
+<div class="check-grid"><label><input asp-for="Input.Morning"/> เช้า</label><label><input asp-for="Input.Noon"/> เที่ยง</label><label><input asp-for="Input.Evening"/> เย็น</label><label><input asp-for="Input.Bedtime"/> ก่อนนอน</label></div><label class="form-label mt-3">ใช้ทุกกี่ชั่วโมง</label><input asp-for="Input.IntervalHours" class="form-control" placeholder="เช่น 6"/>
+<div class="check-grid advice"><label><input asp-for="Input.FinishCourse"/> กินติดต่อกันจนหมด</label><label><input asp-for="Input.MayCauseDrowsiness"/> ยานี้อาจทำให้ง่วงซึม</label><label><input asp-for="Input.BeforeMeal30Minutes"/> ก่อนอาหาร 30 นาที</label><label><input asp-for="Input.ImmediatelyAfterMeal"/> กินหลังอาหารทันที</label></div><label class="form-label mt-3">คำแนะนำเพิ่มเติม</label><input asp-for="Input.AdditionalAdvice" class="form-control"/></section>
+</div>
+
+<section class="label-form-section opd-workflow" hidden>
+    <h2>เลือกรายการยาและตำแหน่งพิมพ์</h2>
+    <div class="row g-3">
+        <div class="col-md-7"><label class="form-label">ผู้ป่วย</label><select asp-for="Input.OpdPatientId" id="opdPatientSelect" class="form-select"><option value="">เลือกผู้ป่วย</option>@foreach(var p in Model.Patients){<option value="@p.Id">@p.FullName · @p.CitizenId</option>}</select></div>
+        <div class="col-md-5"><label class="form-label">วันที่บนฉลาก (ไม่บังคับ)</label><input asp-for="Input.LabelDate" type="date" class="form-control"/></div>
+        <div class="col-12"><label class="form-label">รายการ OPD</label><select asp-for="Input.TreatmentRecordId" id="opdVisitSelect" class="form-select" disabled><option value="">เลือกผู้ป่วยก่อน</option></select></div>
+    </div>
+    <div id="opdMedicineState" class="opd-medicine-state">เลือกผู้ป่วยและรายการ OPD เพื่อโหลดรายการยา</div>
+    <div id="opdMedicineList" class="opd-medicine-list"></div>
+    <div class="opd-slot-heading"><div><strong>ผังตำแหน่งบนกระดาษ A15</strong><small>หนึ่งตำแหน่งใช้ได้กับยาเพียงหนึ่งตัว</small></div><button type="button" id="autoAssignSlots" class="btn btn-sm btn-outline-primary">จัดเรียงอัตโนมัติ</button></div>
+    <div class="opd-slot-board" id="opdSlotBoard">@for(var i=1;i<=8;i++){<div data-opd-slot="@i"><b>@i</b><span>ว่าง</span></div>}</div>
+</section>
+
+<section class="label-form-section"><h2>ตั้งค่ากระดาษและตำแหน่ง</h2><div class="manual-print-settings"><div class="print-settings"><label>เริ่มดวงที่<input asp-for="Input.StartPosition" type="number" min="1" max="8" class="form-control"/></label><label>จำนวนดวง<input asp-for="Input.Quantity" type="number" min="1" max="8" class="form-control"/></label><label>เลื่อนแนวนอน (มม.)<input asp-for="Input.OffsetXMillimeters" type="number" step="0.1" min="-10" max="10" class="form-control"/></label><label>เลื่อนแนวตั้ง (มม.)<input asp-for="Input.OffsetYMillimeters" type="number" step="0.1" min="-10" max="10" class="form-control"/></label></div><div class="slot-preview" id="slotPreview">@for(var i=1;i<=8;i++){<span data-slot="@i">@i</span>}</div></div><p class="form-text">ตำแหน่ง 1–8 เรียงจากซ้ายไปขวาและบนลงล่าง กรุณาพิมพ์ที่ขนาดจริง 100%</p></section>
+<div class="editor-actions"><button asp-action="SaveTemplate" id="saveTemplateButton" class="btn btn-outline-primary" formtarget="_self">บันทึกแม่แบบ</button><button asp-action="Print" class="btn btn-primary btn-lg" formtarget="_blank">ดูตัวอย่างและพิมพ์</button></div>
+</form></main>
+
+<aside class="live-preview-panel"><span>LIVE PREVIEW</span><h2>ตัวอย่างฉลากรูปแบบใหม่</h2><div class="mini-label clinical"><header><strong>@Model.ClinicName</strong><b>ฉลากยา</b><small>@Model.ClinicAddress · โทร @Model.ClinicPhone</small></header><div class="mini-body"><p><em>ชื่อผู้ป่วย</em><i></i><em>วันที่</em><i class="short"></i></p><section><small>ชื่อยา / สรรพคุณ</small><i></i></section><p><em>รับประทานครั้งละ</em><i></i><em>วันละ</em><i class="short"></i><em>ครั้ง</em></p><p class="choices">○ ก่อน　○ หลัง　○ เช้า　○ เที่ยง　○ เย็น　○ ก่อนนอน</p><div class="mini-advice"><strong>คำแนะนำ</strong><small>○ กินติดต่อกันจนหมด　○ อาจทำให้ง่วงซึม</small></div></div><footer>@Model.OpeningHours</footer></div><div class="dimension-note">ขนาดจริง 80 × 50 มม.</div></aside>
+</div></div>
+@section Scripts {
+<partial name="_ValidationScriptsPartial"/>
+<script>
+(() => {
+    const workflowRadios = [...document.querySelectorAll('[name="Input.PrintMode"]')];
+    const blankRadios = [...document.querySelectorAll('[name="Input.BlankMode"]')];
+    const manualWorkflow = document.querySelector('.manual-workflow');
+    const opdWorkflow = document.querySelector('.opd-workflow');
+    const manualSettings = document.querySelector('.manual-print-settings');
+    const saveTemplate = document.getElementById('saveTemplateButton');
+    const fillFields = document.querySelector('.fill-fields');
+    const patient = document.getElementById('opdPatientSelect');
+    const visit = document.getElementById('opdVisitSelect');
+    const medicineList = document.getElementById('opdMedicineList');
+    const medicineState = document.getElementById('opdMedicineState');
+    const assignmentsInput = document.getElementById('opdAssignments');
+    const boardSlots = [...document.querySelectorAll('[data-opd-slot]')];
+    const start = document.getElementById('Input_StartPosition');
+    const qty = document.getElementById('Input_Quantity');
+    const manualSlots = [...document.querySelectorAll('[data-slot]')];
+    let medicines = [];
+    let assignments = [];
+
+    const selectedWorkflow = () => workflowRadios.find(x => x.checked)?.value || 'manual';
+    function updateWorkflow() {
+        const opd = selectedWorkflow() === 'opd';
+        manualWorkflow.hidden = opd;
+        opdWorkflow.hidden = !opd;
+        manualSettings.hidden = opd;
+        saveTemplate.hidden = opd;
+    }
+    function updateBlankMode() {
+        fillFields.classList.toggle('fields-disabled', blankRadios.find(x => x.checked)?.value === 'true');
+    }
+    function paintManualSlots() {
+        const first = +start.value || 1;
+        const count = Math.min(+qty.value || 1, 9 - first);
+        manualSlots.forEach((slot, index) => slot.classList.toggle('selected', index + 1 >= first && index + 1 < first + count));
+    }
+    function persistAssignments() {
+        assignmentsInput.value = JSON.stringify(assignments.map(x => ({ medicineIndex: x.medicineIndex, position: x.position })));
+        boardSlots.forEach(slot => {
+            const position = +slot.dataset.opdSlot;
+            const assignment = assignments.find(x => x.position === position);
+            slot.classList.toggle('occupied', !!assignment);
+            slot.querySelector('span').textContent = assignment ? medicines[assignment.medicineIndex]?.name || 'รายการยา' : 'ว่าง';
+        });
+    }
+    function renderMedicines() {
+        medicineList.innerHTML = '';
+        assignments = [];
+        if (!medicines.length) {
+            medicineState.hidden = false;
+            medicineState.textContent = 'ไม่พบรายการยาที่แยกได้จาก OPD นี้';
+            persistAssignments();
+            return;
+        }
+        medicineState.hidden = true;
+        medicines.forEach((medicine, index) => {
+            const row = document.createElement('article');
+            row.className = 'opd-medicine-row';
+            const info = document.createElement('div');
+            const title = document.createElement('strong');
+            title.textContent = medicine.name;
+            const detail = document.createElement('small');
+            detail.textContent = [medicine.usage, medicine.advice].filter(Boolean).join(' · ') || 'ไม่มีรายละเอียดวิธีใช้';
+            info.append(title, detail);
+            const select = document.createElement('select');
+            select.className = 'form-select form-select-sm';
+            select.innerHTML = '<option value="">ไม่พิมพ์</option>' + Array.from({length:8},(_,i)=>`<option value="${i+1}">ตำแหน่ง ${i+1}</option>`).join('');
+            select.addEventListener('change', () => {
+                const position = +select.value;
+                const duplicate = assignments.find(x => x.position === position && x.medicineIndex !== index);
+                if (position && duplicate) {
+                    select.value = assignments.find(x => x.medicineIndex === index)?.position || '';
+                    window.alert(`ตำแหน่ง ${position} ถูกเลือกโดยยา ${medicines[duplicate.medicineIndex].name} แล้ว`);
+                    return;
+                }
+                assignments = assignments.filter(x => x.medicineIndex !== index);
+                if (position) assignments.push({ medicineIndex:index, position });
+                persistAssignments();
+            });
+            row.append(info, select);
+            medicineList.append(row);
+        });
+        persistAssignments();
+    }
+    async function loadVisits(selectedId) {
+        visit.disabled = true;
+        visit.innerHTML = '<option value="">กำลังโหลด...</option>';
+        medicines = []; renderMedicines();
+        if (!selectedId) { visit.innerHTML = '<option value="">เลือกผู้ป่วยก่อน</option>'; return; }
+        const response = await fetch(`@Url.Action("OpdVisits")?patientId=${encodeURIComponent(selectedId)}`);
+        const visits = response.ok ? await response.json() : [];
+        visit.innerHTML = '<option value="">เลือกรายการ OPD</option>' + visits.map(x => `<option value="${x.id}">${x.date} · ${escapeHtml(x.diagnosis || 'ไม่ระบุการวินิจฉัย')}</option>`).join('');
+        visit.disabled = false;
+    }
+    async function loadMedicines(recordId) {
+        medicines = []; renderMedicines();
+        if (!recordId) { medicineState.hidden = false; medicineState.textContent = 'เลือกรายการ OPD เพื่อโหลดรายการยา'; return; }
+        medicineState.hidden = false; medicineState.textContent = 'กำลังโหลดรายการยา...';
+        const response = await fetch(`@Url.Action("OpdMedicines")?treatmentRecordId=${encodeURIComponent(recordId)}`);
+        const data = response.ok ? await response.json() : { medicines:[] };
+        if (`${data.patientId}` !== patient.value) { medicines = []; renderMedicines(); return; }
+        medicines = data.medicines || [];
+        renderMedicines();
+    }
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+
+    workflowRadios.forEach(x => x.addEventListener('change', updateWorkflow));
+    blankRadios.forEach(x => x.addEventListener('change', updateBlankMode));
+    patient.addEventListener('change', () => loadVisits(patient.value));
+    visit.addEventListener('change', () => loadMedicines(visit.value));
+    start.addEventListener('input', paintManualSlots);
+    qty.addEventListener('input', paintManualSlots);
+    document.getElementById('autoAssignSlots').addEventListener('click', () => {
+        assignments = medicines.slice(0, 8).map((_, index) => ({ medicineIndex:index, position:index + 1 }));
+        [...medicineList.querySelectorAll('select')].forEach((select, index) => select.value = index < 8 ? `${index + 1}` : '');
+        persistAssignments();
+    });
+    document.getElementById('labelForm').addEventListener('submit', event => {
+        if (selectedWorkflow() === 'opd' && assignments.length === 0) {
+            event.preventDefault();
+            window.alert('กรุณาเลือกยาและกำหนดตำแหน่งพิมพ์อย่างน้อย 1 รายการ');
+        }
+    });
+
+    updateWorkflow(); updateBlankMode(); paintManualSlots(); persistAssignments();
+    if (selectedWorkflow() === 'opd' && patient.value) loadVisits(patient.value);
+})();
+</script>
+}

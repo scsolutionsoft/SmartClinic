@@ -1,0 +1,95 @@
+@model SmartClinic.Web.ViewModels.Icd10CatalogViewModel
+@{
+    ViewData["Title"] = "ฐานข้อมูล ICD-10";
+    var firstPage = Math.Max(1, Model.Page - 3);
+    var lastPage = Math.Min(Model.TotalPages, Model.Page + 3);
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3 mb-4">
+        <div>
+            <span class="badge text-bg-primary mb-2">WHO ICD-10 2019</span>
+            <h1 class="mb-2">ฐานข้อมูล ICD-10 เต็มระบบ</h1>
+            <p class="text-secondary mb-0">ค้นหารหัส ชื่อโรค หมวด และบล็อกจากชุดข้อมูลทางการขององค์การอนามัยโลก</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="https://icdcdn.who.int/icd10/index.html" target="_blank" rel="noopener">แหล่งข้อมูล WHO</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><small class="text-secondary">ข้อมูลทั้งหมด</small><div class="fs-3 fw-bold">@Model.TotalCount.ToString("N0")</div><span>รหัสและหัวข้อลำดับชั้น</span></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><small class="text-secondary">ใช้ลงรหัสได้</small><div class="fs-3 fw-bold text-success">@Model.TerminalCount.ToString("N0")</div><span>Terminal codes</span></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><small class="text-secondary">ชื่อภาษาไทยที่มี</small><div class="fs-3 fw-bold">@Model.ThaiNameCount.ToString("N0")</div><span>ข้อมูลเดิมที่เก็บรักษาไว้</span></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card h-100"><div class="card-body"><small class="text-secondary">ผลการค้นหา</small><div class="fs-3 fw-bold">@Model.FilteredCount.ToString("N0")</div><span>ตรงกับตัวกรองปัจจุบัน</span></div></div></div>
+    </div>
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-5">
+                <label class="form-label" for="icdSearch">ค้นหา</label>
+                <input id="icdSearch" name="q" value="@Model.SearchTerm" class="form-control" placeholder="เช่น A00, cholera, เบาหวาน หรือชื่อหมวด" />
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label" for="chapterFilter">บท</label>
+                <select id="chapterFilter" name="chapter" class="form-select">
+                    <option value="">ทุกบท</option>
+                    @foreach (var item in Model.Chapters)
+                    {
+                        <option value="@item.Code" selected="@(item.Code == Model.ChapterCode)">@item.Code · @item.Title (@item.Count.ToString("N0"))</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label" for="typeFilter">ประเภท</label>
+                <select id="typeFilter" name="type" class="form-select">
+                    <option value="terminal" selected="@(Model.RecordType == "terminal")">ใช้ลงรหัสได้</option>
+                    <option value="heading" selected="@(Model.RecordType == "heading")">หัวข้อเท่านั้น</option>
+                    <option value="all" selected="@(Model.RecordType == "all")">ทั้งหมด</option>
+                </select>
+            </div>
+            <div class="col-lg-1 d-grid"><button class="btn btn-primary">ค้นหา</button></div>
+        </div>
+    </form>
+
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th>รหัส</th><th>ชื่อโรค</th><th>บล็อก</th><th>บท</th><th>ประเภท</th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td><strong class="text-primary">@(string.IsNullOrWhiteSpace(item.DisplayCode) ? item.Code : item.DisplayCode)</strong><div class="small text-secondary">ฐานข้อมูล: @item.Code</div></td>
+                        <td><div class="fw-semibold">@(string.IsNullOrWhiteSpace(item.ThaiName) ? item.EnglishName : item.ThaiName)</div>@if (!string.IsNullOrWhiteSpace(item.ThaiName)){<div class="small text-secondary">@item.EnglishName</div>}</td>
+                        <td><span class="badge text-bg-light">@item.BlockCode</span><div class="small mt-1">@item.BlockTitle</div></td>
+                        <td><span class="small">@item.ChapterCode · @item.ChapterTitle</span></td>
+                        <td>@if(item.IsTerminal){<span class="badge text-bg-success">ใช้ลงรหัสได้</span>}else{<span class="badge text-bg-secondary">หัวข้อ</span>}@if(item.IsDerived){<div class="small text-secondary mt-1">Derived subclassification</div>}</td>
+                    </tr>
+                }
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center py-5 text-secondary">ไม่พบข้อมูลที่ตรงกับการค้นหา</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4" aria-label="หน้าฐานข้อมูล ICD-10">
+            <span class="text-secondary">หน้า @Model.Page.ToString("N0") จาก @Model.TotalPages.ToString("N0")</span>
+            <ul class="pagination mb-0">
+                <li class="page-item @(Model.Page == 1 ? "disabled" : null)"><a class="page-link" asp-route-q="@Model.SearchTerm" asp-route-chapter="@Model.ChapterCode" asp-route-type="@Model.RecordType" asp-route-page="@(Model.Page - 1)">ก่อนหน้า</a></li>
+                @for (var pageNumber = firstPage; pageNumber <= lastPage; pageNumber++)
+                {
+                    <li class="page-item @(pageNumber == Model.Page ? "active" : null)"><a class="page-link" asp-route-q="@Model.SearchTerm" asp-route-chapter="@Model.ChapterCode" asp-route-type="@Model.RecordType" asp-route-page="@pageNumber">@pageNumber</a></li>
+                }
+                <li class="page-item @(Model.Page == Model.TotalPages ? "disabled" : null)"><a class="page-link" asp-route-q="@Model.SearchTerm" asp-route-chapter="@Model.ChapterCode" asp-route-type="@Model.RecordType" asp-route-page="@(Model.Page + 1)">ถัดไป</a></li>
+            </ul>
+        </nav>
+    }
+
+    <div class="alert alert-warning mt-4 mb-0">
+        ชุด metadata นี้รองรับการค้นหา ตรวจรูปแบบ และจัดกลุ่มรหัส แต่ไม่มี Inclusion/Exclusion notes จึงไม่ควรใช้แทนคู่มือการให้รหัสหรือการวินิจฉัยโดยผู้ประกอบวิชาชีพ
+    </div>
+</div>

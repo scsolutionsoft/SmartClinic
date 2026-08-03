@@ -1,0 +1,103 @@
+@model SelfPayConsentViewModel
+@{
+    ViewData["Title"] = "หนังสือยินยอมชำระค่าบริการเอง";
+    string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+}
+
+<div class="consent-toolbar d-print-none">
+    <a class="btn btn-outline-secondary" asp-action="Index" asp-fragment="latest-records">กลับ</a>
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        พิมพ์หนังสือยินยอม
+    </button>
+</div>
+
+<article class="self-pay-consent-sheet">
+    <header class="consent-clinic-header">
+        @if (!string.IsNullOrWhiteSpace(Model.ClinicLogoUrl))
+        {
+            <img src="@Model.ClinicLogoUrl" alt="โลโก้ @Model.ClinicName" class="consent-clinic-logo" />
+        }
+        <strong>@Model.ClinicName</strong>
+        <span>@Display(Model.ClinicAddress)</span>
+        <span>โทรศัพท์: @Display(Model.ClinicPhoneNumber)</span>
+        <span>รหัสคลินิก: @Model.ClinicCode</span>
+    </header>
+
+    <div class="consent-divider"></div>
+
+    <section class="consent-title">
+        <h1>หนังสือแสดงความยินยอมเข้ารับบริการและชำระค่าบริการเอง</h1>
+        <p>(กรณีรับบริการนอกเหนือสิทธิประโยชน์ หรือ ประสงค์ชำระค่าบริการเอง)</p>
+    </section>
+
+    <div class="consent-visit-row">
+        <span>วันเดือนปีเข้ารับบริการ</span>
+        <span class="consent-fill consent-date-fill">@Model.VisitDateText</span>
+        <span class="consent-auth-label">Authen Code</span>
+        <span class="consent-fill consent-auth-fill">@Display(Model.AuthenticationCode)</span>
+    </div>
+
+    <p class="consent-patient-row">
+        ข้าพเจ้า นาย/นาง/นางสาว
+        <span class="consent-fill consent-name-fill">@Model.PatientName</span>
+    </p>
+    <p class="consent-patient-row">
+        เลขประจำตัวประชาชน
+        <span class="consent-fill consent-citizen-fill">@Model.CitizenId</span>
+    </p>
+    <p>
+        มีความประสงค์เข้ารับบริการ ณ <strong>@Model.ClinicName</strong>
+        ข้าพเจ้าขอแสดงเจตนาด้วยความสมัครใจ ดังนี้
+    </p>
+
+    <div class="consent-statements">
+        <p><span class="consent-checkbox checked">✓</span> ข้าพเจ้าได้รับการแจ้งสิทธิในการเข้ารับบริการภายใต้ระบบหลักประกันสุขภาพแห่งชาติ (บัตรทอง) รวมถึงเงื่อนไข หลักเกณฑ์ และทางเลือกในการรับบริการตามที่สำนักงานหลักประกันสุขภาพแห่งชาติ (สปสช.) กำหนดแล้ว</p>
+        <p><span class="consent-checkbox checked">✓</span> ข้าพเจ้าได้รับคำอธิบายเกี่ยวกับสิทธิประโยชน์ที่ครอบคลุมและไม่ครอบคลุม รวมถึงค่าใช้จ่าย และได้รับทราบว่าการตรวจรักษาโรคเบื้องต้นและการจ่ายยาในครั้งนี้ ดำเนินการโดยพยาบาลเวชปฏิบัติ ภายใต้ขอบเขตวิชาชีพและคู่มือแนวทางการรักษาโรคเบื้องต้น</p>
+        <p>
+            <span class="consent-checkbox checked">✓</span> ภายหลังได้รับข้อมูลครบถ้วน ข้าพเจ้ามีความประสงค์ที่จะ
+            <span class="consent-choice"><span class="consent-checkbox"></span> เลือกรับบริการ ค่ายา หรือเวชภัณฑ์ที่อยู่นอกเหนือสิทธิประโยชน์หลักประกันสุขภาพแห่งชาติ</span>
+            หรือ
+            <span class="consent-choice"><span class="consent-checkbox checked">✓</span> มีความประสงค์ขอรับบริการและชำระค่าใช้จ่ายเองในฐานะผู้ป่วยทั่วไป</span>
+            โดยยินยอมชำระค่าบริการ ค่ายา และเวชภัณฑ์ดังกล่าวด้วยตนเอง ตามอัตราที่คลินิกกำหนด สำหรับการรับบริการครั้งนี้
+        </p>
+        <p><span class="consent-checkbox checked">✓</span> ข้าพเจ้ารับทราบว่า คลินิกจะไม่มีการนำประวัติการตรวจรักษาและการจ่ายยาในครั้งนี้ไปเบิกจ่ายค่าชดเชยจากสำนักงานหลักประกันสุขภาพแห่งชาติ (สปสช.) เพื่อมิให้เกิดการเบิกจ่ายซ้ำซ้อน</p>
+        <p><span class="consent-checkbox checked">✓</span> ข้าพเจ้ารับทราบว่าการลงนามในหนังสือฉบับนี้ มิใช่การสละสิทธิหลักประกันสุขภาพแห่งชาติ และไม่มีผลกระทบต่อสิทธิในการรับบริการครั้งต่อไป ทั้งนี้ การชำระค่าบริการเป็นไปตามความสมัครใจของข้าพเจ้า</p>
+        <p><span class="consent-checkbox checked">✓</span> การตัดสินใจครั้งนี้เป็นไปโดยสมัครใจ ไม่มีผู้ใดบังคับ ข่มขู่ หลอกลวง หรือทำให้เข้าใจผิด ทั้งนี้ หนังสือฉบับนี้ใช้เฉพาะการรับบริการในครั้งนี้เท่านั้น</p>
+    </div>
+
+    <section class="consent-signatures">
+        <div class="consent-signature">
+            <div class="consent-signature-space">
+                @if (Model.HasPatientSignature && !string.IsNullOrWhiteSpace(Model.PatientSignatureUrl))
+                {
+                    <img src="@Model.PatientSignatureUrl" alt="ลายเซ็นผู้รับบริการ" />
+                }
+            </div>
+            <div class="consent-sign-line"></div>
+            <div>(@Model.PatientName)</div>
+            <strong>ผู้รับบริการ</strong>
+        </div>
+        <div class="consent-signature">
+            <div class="consent-signature-space">
+                @if (Model.HasProviderSignature && !string.IsNullOrWhiteSpace(Model.ProviderSignatureUrl))
+                {
+                    <img src="@Model.ProviderSignatureUrl" alt="ลายเซ็นเจ้าหน้าที่ผู้รับรอง" />
+                }
+            </div>
+            <div class="consent-sign-line"></div>
+            <div>(@Display(Model.ProviderName))</div>
+            <div>เจ้าหน้าที่ผู้รับรอง</div>
+        </div>
+    </section>
+
+    <section class="consent-notes">
+        <strong>หมายเหตุ</strong>
+        <ol>
+            <li>ผู้รับบริการยังคงมีสิทธิหลักประกันสุขภาพแห่งชาติ (บัตรทอง) ตามพระราชบัญญัติหลักประกันสุขภาพแห่งชาติ พ.ศ. 2545</li>
+            <li>การลงนามในหนังสือฉบับนี้เป็นการแสดงเจตนาเพื่อการรับบริการในครั้งนี้เท่านั้น มิใช่การสละสิทธิหลักประกันสุขภาพแห่งชาติ</li>
+            <li>การเรียกเก็บค่าบริการให้เป็นไปตามกฎหมาย ระเบียบ ประกาศ และหลักเกณฑ์ของสำนักงานหลักประกันสุขภาพแห่งชาติ (สปสช.) โดยคลินิกไม่สามารถเรียกเก็บค่าใช้จ่ายในส่วนที่คุ้มครองตามสิทธิประโยชน์ได้</li>
+            <li>การจ่ายยาและเวชภัณฑ์ดำเนินการภายใต้ขอบเขตข้อบังคับสภาการพยาบาลว่าด้วยข้อจำกัดและเงื่อนไขในการประกอบวิชาชีพการพยาบาลและการผดุงครรภ์</li>
+            <li>ผู้รับบริการได้รับข้อมูลเกี่ยวกับสิทธิ เงื่อนไข และทางเลือกในการรับบริการอย่างครบถ้วนก่อนตัดสินใจลงนาม</li>
+        </ol>
+    </section>
+</article>

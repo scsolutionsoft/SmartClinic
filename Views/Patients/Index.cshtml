@@ -47,6 +47,46 @@
         border: 2px solid #dee2e6;
     }
     .recent-patient-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .recent-patient-list .recent-patient-item {
+        border-bottom: 1px solid #e8eef6;
+        transition: background-color .18s ease;
+    }
+    .recent-patient-list .recent-patient-item:hover {
+        background: #f6faff;
+    }
+    .recent-patient-rank {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .82rem;
+        font-weight: 700;
+        color: #1f4f86;
+        background: linear-gradient(145deg, #edf5ff 0%, #daebff 100%);
+        border: 1px solid #bfd8f9;
+        box-shadow: 0 2px 8px rgba(57, 110, 169, .14);
+        flex-shrink: 0;
+    }
+    .recent-patient-list .recent-patient-item:nth-child(1) .recent-patient-rank {
+        color: #6f4a00;
+        background: linear-gradient(145deg, #fff5dc 0%, #ffe8b5 100%);
+        border-color: #f1cf84;
+        box-shadow: 0 2px 8px rgba(176, 130, 33, .18);
+    }
+    .recent-patient-list .recent-patient-item:nth-child(2) .recent-patient-rank {
+        color: #3c4f63;
+        background: linear-gradient(145deg, #f5f8fc 0%, #e5edf7 100%);
+        border-color: #cad7e8;
+        box-shadow: 0 2px 8px rgba(88, 112, 138, .16);
+    }
+    .recent-patient-list .recent-patient-item:nth-child(3) .recent-patient-rank {
+        color: #5f4b24;
+        background: linear-gradient(145deg, #fff3e7 0%, #ffe0c2 100%);
+        border-color: #efc99e;
+        box-shadow: 0 2px 8px rgba(168, 111, 55, .16);
+    }
     .reader-dot {
         width: 10px; height: 10px;
         border-radius: 50%;
@@ -70,10 +110,11 @@
         </div>
         <button type="button" class="btn btn-outline-warning btn-sm" data-smartcard-restart="true">
             <svg width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
-            รีสตาร์ท Bridge
+            ตรวจสอบ Bridge
         </button>
     </div>
 </div>
+
 
 <div class="row g-4">
     <!-- LEFT: Registration form -->
@@ -207,13 +248,31 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h5 fw-bold mb-0">ผู้ป่วยล่าสุด</h2>
-                    <span class="badge text-bg-light">@Model.RecentPatients.Count รายการ</span>
+                    <span class="badge text-bg-light">ทั้งหมด @Model.TotalItems รายการ</span>
                 </div>
-                <div class="list-group list-group-flush">
+                <form asp-action="Index" method="get" class="mb-3">
+                    <label for="patient-search" class="visually-hidden">ค้นหาชื่อ-นามสกุล หรือเลขบัตรประจำตัวประชาชน</label>
+                    <div class="input-group">
+                        <input id="patient-search"
+                               name="search"
+                               value="@Model.SearchTerm"
+                               class="form-control"
+                               placeholder="ค้นหาชื่อ-นามสกุล หรือเลขบัตรประชาชน"
+                               autocomplete="off" />
+                        <button type="submit" class="btn btn-primary">ค้นหา</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                        {
+                            <a asp-action="Index" class="btn btn-outline-secondary">ล้าง</a>
+                        }
+                    </div>
+                </form>
+                <div class="list-group list-group-flush recent-patient-list">
+                    @{ var recentPatientIndex = ((Model.CurrentPage - 1) * PatientDashboardViewModel.PageSize) + 1; }
                     @foreach (var patient in Model.RecentPatients)
                     {
-                        <div class="list-group-item px-0 py-3 border-bottom">
+                        <div class="list-group-item px-0 py-3 recent-patient-item">
                             <div class="d-flex gap-3 align-items-center">
+                                <span class="recent-patient-rank">@recentPatientIndex</span>
                                 <div class="recent-patient-avatar">
                                     @if (patient.HasPhoto)
                                     {
@@ -248,22 +307,96 @@
                                 </div>
                             </div>
                         </div>
+
+                        recentPatientIndex++;
                     }
                     @if (!Model.RecentPatients.Any())
                     {
                         <div class="text-center py-5 text-body-secondary">
                             <svg width="40" height="40" fill="currentColor" class="mb-2 opacity-25" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/><path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
-                            <div>ยังไม่มีผู้ป่วยในระบบ</div>
+                            <div>@(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "ยังไม่มีผู้ป่วยในระบบ" : "ไม่พบข้อมูลผู้ป่วยที่ค้นหา")</div>
                         </div>
                     }
                 </div>
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="patients-pagination" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : string.Empty)">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-search="@Model.SearchTerm">ก่อนหน้า</a>
+                            </li>
+
+                            @{
+                                var pageNumbers = new SortedSet<int> { 1, Model.TotalPages };
+                                for (var pageNumber = Model.CurrentPage - 2; pageNumber <= Model.CurrentPage + 2; pageNumber++)
+                                {
+                                    if (pageNumber >= 1 && pageNumber <= Model.TotalPages)
+                                    {
+                                        pageNumbers.Add(pageNumber);
+                                    }
+                                }
+
+                                int? previousPage = null;
+                            }
+
+                            @foreach (var pageNumber in pageNumbers)
+                            {
+                                if (previousPage.HasValue && pageNumber - previousPage.Value > 1)
+                                {
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                }
+
+                                <li class="page-item @(pageNumber == Model.CurrentPage ? "active" : string.Empty)">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-search="@Model.SearchTerm">@pageNumber</a>
+                                </li>
+
+                                previousPage = pageNumber;
+                            }
+
+                            <li class="page-item disabled">
+                                <span class="page-link">หน้า @Model.CurrentPage / @Model.TotalPages</span>
+                            </li>
+
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : string.Empty)">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-search="@Model.SearchTerm">ถัดไป</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
             </div>
         </div>
     </div>
 </div>
 
+
+<div class="modal fade" id="paymentSlipModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content credit-request-modal"><form asp-controller="Subscriptions" asp-action="SubmitSlip" method="post" enctype="multipart/form-data"><div class="modal-header"><div><span>PAYMENT NOTIFICATION</span><h2 class="modal-title">แจ้งสลิปโอนเงินเพื่อเติมเครดิต</h2></div><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body slip-submit-grid"><div><label class="form-label">ชื่อผู้ติดต่อ</label><input name="ContactName" class="form-control" value="@Model.ContactName" required/><label class="form-label">เบอร์โทรศัพท์</label><input name="PhoneNumber" class="form-control" value="@Model.ContactPhone" required/><label class="form-label">ยอดเงินที่โอน</label><input name="Amount" type="number" min="0.01" step="0.01" class="form-control" required/><label class="form-label">วันและเวลาโอน</label><input name="TransferDateTime" type="datetime-local" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" class="form-control" required/></div><div><label class="form-label">ธนาคาร/ช่องทางโอน</label><input name="TransferBank" class="form-control" required/><label class="form-label">เลขอ้างอิง</label><input name="TransferReference" class="form-control"/><label class="form-label">เครดิตที่ต้องการ</label><input name="RequestedCredits" type="number" min="0" value="20" class="form-control"/><div class="form-check form-switch unlimited-switch"><input name="RequestUnlimited" value="true" type="checkbox" class="form-check-input" id="slipUnlimited"/><label class="form-check-label" for="slipUnlimited">ขอแพ็กเกจ Unlimited</label></div><label class="form-label">แนบสลิป</label><input name="SlipFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="form-control" required/><small>JPG, PNG, WebP หรือ PDF ไม่เกิน 10 MB</small></div><div class="col-span-2"><label class="form-label">หมายเหตุ</label><textarea name="Note" class="form-control" rows="2"></textarea></div></div><div class="modal-footer"><span class="me-auto">สอบถาม 088-777-6775</span><button class="btn btn-success">ส่งสลิปให้ตรวจสอบ</button></div></form></div></div></div>
+
+<div class="modal fade" id="adminMessageModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content credit-request-modal"><form asp-controller="Subscriptions" asp-action="SendMessage" method="post"><div class="modal-header"><div><span>ADMIN CONTACT</span><h2 class="modal-title">ส่งข้อความถึงแอดมินระบบ</h2></div><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><label class="form-label">หัวข้อ</label><input name="Subject" class="form-control" required/><label class="form-label">รายละเอียด</label><textarea name="Message" class="form-control" rows="5" required></textarea><label class="form-label">ชื่อผู้ติดต่อ</label><input name="ContactName" class="form-control" value="@Model.ContactName" required/><label class="form-label">เบอร์โทรศัพท์</label><input name="PhoneNumber" class="form-control" value="@Model.ContactPhone" required/></div><div class="modal-footer"><a href="tel:0887776775" class="btn btn-outline-dark">โทร 088-777-6775</a><button class="btn btn-primary">ส่งข้อความ</button></div></form></div></div></div>
+
+@if ((TempData["SlipError"] as string) is string slipError){<script>document.addEventListener('DOMContentLoaded',()=>{bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentSlipModal')).show();smartClinicStatusModal.show({type:'warning',subtitle:'Payment slip',state:'ตรวจสอบข้อมูล',stateDescription:'ส่งสลิปไม่สำเร็จ',message:@Html.Raw(System.Text.Json.JsonSerializer.Serialize(slipError)),actionText:'กลับไปตรวจสอบ'})});</script>}
+@if ((TempData["SlipSubmitted"] as string) == "true"){<script>document.addEventListener('DOMContentLoaded',()=>smartClinicStatusModal.show({type:'success',subtitle:'Payment slip',state:'ส่งสลิปแล้ว',stateDescription:'รอแอดมินตรวจสอบ',message:'ระบบเก็บหลักฐานการโอนเงินเรียบร้อย เมื่ออนุมัติแล้วเครดิตจะเพิ่มอัตโนมัติ',meta:'ตรวจสอบได้โดยผู้ดูแลระบบ',actionText:'ตกลง'}));</script>}
+@if ((TempData["MessageSent"] as string) == "true"){<script>document.addEventListener('DOMContentLoaded',()=>smartClinicStatusModal.show({type:'success',subtitle:'Admin contact',state:'ส่งข้อความแล้ว',stateDescription:'แอดมินได้รับข้อความของคุณแล้ว',message:'ทีมงานจะดำเนินการและติดต่อกลับตามข้อมูลที่แจ้งไว้',actionText:'ตกลง'}));</script>}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    @if (ViewData["DuplicateCitizenId"] is string duplicateCitizenId)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                smartClinicStatusModal.show({
+                    type: 'warning',
+                    subtitle: 'Patient registration',
+                    state: 'Duplicate',
+                    stateDescription: 'ไม่สามารถลงทะเบียนซ้ำได้',
+                    message: 'เลขบัตรประชาชนนี้มีข้อมูลผู้ป่วยอยู่ในคลินิกแล้ว กรุณาค้นหาและแก้ไขข้อมูลเดิม',
+                    meta: 'Citizen ID: @duplicateCitizenId',
+                    actionText: 'กลับไปตรวจสอบ'
+                });
+            });
+        </script>
+    }
     <script>
     function previewUploadedPhoto(event) {
         var file = event.target.files && event.target.files[0];

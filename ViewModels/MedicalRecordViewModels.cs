@@ -27,12 +27,19 @@ public class MedicalRecordCreateViewModel
     [Display(Name = "Authentication Code")]
     public string? AuthenticationCode { get; set; }
 
+    [Display(Name = "ผู้ป่วยประสงค์ชำระค่าบริการเอง")]
+    public bool IsSelfPay { get; set; }
+
     [Display(Name = "เลขบัตรประจำตัวประชาชน")]
     public string? CitizenId { get; set; }
 
     [Required]
     [Display(Name = "การวินิจฉัย")]
     public string Diagnosis { get; set; } = string.Empty;
+
+    public string? PrimaryIcd10Code { get; set; }
+
+    public string? DifferentialIcd10Codes { get; set; }
 
     [Display(Name = "การวินิจฉัยแยกอาการเบื้องต้น")]
     public string? InitialDifferentialDiagnosis { get; set; }
@@ -45,6 +52,15 @@ public class MedicalRecordCreateViewModel
 
     [Display(Name = "การตรวจร่างกาย")]
     public string? PhysicalExam { get; set; }
+
+    [Display(Name = "อุณหภูมิ")] public decimal? TemperatureCelsius { get; set; }
+    [Display(Name = "ชีพจร")] public int? PulseRate { get; set; }
+    [Display(Name = "การหายใจ")] public int? RespiratoryRate { get; set; }
+    [Display(Name = "ความดันตัวบน")] public int? SystolicPressure { get; set; }
+    [Display(Name = "ความดันตัวล่าง")] public int? DiastolicPressure { get; set; }
+    [Display(Name = "น้ำหนัก")] public decimal? WeightKilograms { get; set; }
+    [Display(Name = "ส่วนสูง")] public decimal? HeightCentimeters { get; set; }
+    [Display(Name = "ดัชนีมวลกาย")] public decimal? BodyMassIndex { get; set; }
 
     [Display(Name = "การตรวจร่างกายตามปัญหาของผู้ป่วย")]
     public string? ProblemPhysicalExam { get; set; }
@@ -66,6 +82,9 @@ public class MedicalRecordCreateViewModel
 
     [Display(Name = "ระบุ")]
     public string? FollowUpClinicNote { get; set; }
+
+    [Display(Name = "วันและเวลานัดหมาย")]
+    public DateTime? FollowUpAppointmentDateTime { get; set; }
 
     [Display(Name = "ติดตามทางช่องทางอื่น")]
     public bool FollowUpOther { get; set; }
@@ -94,7 +113,6 @@ public class MedicalRecordCreateViewModel
     [Display(Name = "หมายเหตุ")]
     public string? Note { get; set; }
 
-    [Required]
     [Display(Name = "ไฟล์ OPD Card (PDF)")]
     public IFormFile? OpdPdfFile { get; set; }
 }
@@ -115,6 +133,8 @@ public class MedicalRecordItemViewModel
 
     public string AuthenticationCode { get; set; } = string.Empty;
 
+    public bool IsSelfPay { get; set; }
+
     public string Diagnosis { get; set; } = string.Empty;
 
     public string FileName { get; set; } = string.Empty;
@@ -127,6 +147,8 @@ public class MedicalRecordReportViewModel
     public int RecordId { get; set; }
 
     public string ClinicCode { get; set; } = string.Empty;
+
+    public string? ClinicLogoUrl { get; set; }
 
     public string PatientName { get; set; } = string.Empty;
 
@@ -157,6 +179,14 @@ public class MedicalRecordReportViewModel
     public string PresentIllness { get; set; } = string.Empty;
 
     public string PhysicalExam { get; set; } = string.Empty;
+    public decimal? TemperatureCelsius { get; set; }
+    public int? PulseRate { get; set; }
+    public int? RespiratoryRate { get; set; }
+    public int? SystolicPressure { get; set; }
+    public int? DiastolicPressure { get; set; }
+    public decimal? WeightKilograms { get; set; }
+    public decimal? HeightCentimeters { get; set; }
+    public decimal? BodyMassIndex { get; set; }
 
     public string ProblemPhysicalExam { get; set; } = string.Empty;
 
@@ -195,13 +225,72 @@ public class MedicalRecordReportViewModel
 
 public class MedicalRecordsDashboardViewModel
 {
+    public const int PageSize = 20;
+
     public MedicalRecordCreateViewModel Input { get; set; } = new();
+
+    public int? EditRecordId { get; set; }
 
     public IReadOnlyList<SelectListItem> PatientOptions { get; set; } = Array.Empty<SelectListItem>();
 
     public IReadOnlyList<MedicalRecordItemViewModel> Records { get; set; } = Array.Empty<MedicalRecordItemViewModel>();
 
+    public int CurrentPage { get; set; } = 1;
+
+    public int TotalItems { get; set; }
+
+    public int TotalPages { get; set; }
+
+    public string SearchTerm { get; set; } = string.Empty;
+
     public string? StatusMessage { get; set; }
+
+    public int OpdRecordLimit { get; set; } = 30;
+
+    public int UsedOpdRecords { get; set; }
+
+    public bool IsUnlimited { get; set; }
+
+    public int RemainingOpdRecords => IsUnlimited ? int.MaxValue : Math.Max(0, OpdRecordLimit - UsedOpdRecords);
+
+    public string ContactName { get; set; } = string.Empty;
+
+    public string ContactPhone { get; set; } = string.Empty;
+}
+
+public class SelfPayConsentViewModel
+{
+    public int RecordId { get; set; }
+
+    public string ClinicName { get; set; } = string.Empty;
+
+    public string ClinicAddress { get; set; } = string.Empty;
+
+    public string ClinicPhoneNumber { get; set; } = string.Empty;
+
+    public string ClinicCode { get; set; } = string.Empty;
+
+    public string? ClinicLogoUrl { get; set; }
+
+    public string PatientName { get; set; } = string.Empty;
+
+    public string CitizenId { get; set; } = string.Empty;
+
+    public string VisitDateText { get; set; } = string.Empty;
+
+    public string AuthenticationCode { get; set; } = string.Empty;
+
+    public string? PatientSignatureUrl { get; set; }
+
+    public bool HasPatientSignature { get; set; }
+
+    public string ProviderName { get; set; } = string.Empty;
+
+    public string ProviderProfessionalTitle { get; set; } = string.Empty;
+
+    public string? ProviderSignatureUrl { get; set; }
+
+    public bool HasProviderSignature { get; set; }
 }
 
 public class PatientSearchResultViewModel
@@ -211,6 +300,8 @@ public class PatientSearchResultViewModel
     public string FullName { get; set; } = string.Empty;
 
     public string CitizenId { get; set; } = string.Empty;
+
+    public string ServiceRecipientId { get; set; } = string.Empty;
 
     public string Text => $"{FullName} ({CitizenId})";
 }
@@ -234,6 +325,14 @@ public class MedicalRecordPdfImportViewModel
     public string PresentIllness { get; set; } = string.Empty;
 
     public string PhysicalExam { get; set; } = string.Empty;
+    public decimal? TemperatureCelsius { get; set; }
+    public int? PulseRate { get; set; }
+    public int? RespiratoryRate { get; set; }
+    public int? SystolicPressure { get; set; }
+    public int? DiastolicPressure { get; set; }
+    public decimal? WeightKilograms { get; set; }
+    public decimal? HeightCentimeters { get; set; }
+    public decimal? BodyMassIndex { get; set; }
 
     public string ProblemPhysicalExam { get; set; } = string.Empty;
 

@@ -5,7 +5,12 @@
     var isAuthenticated = Context.User.Identity?.IsAuthenticated ?? false;
     var displayName = Context.User.Identity?.Name ?? "Guest";
     var currentController = (ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty);
-    string ActiveNav(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+    var currentAction = (ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty);
+    string ActiveNav(string controller, string? action = null) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) &&
+        (action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase))
+            ? "active"
+            : string.Empty;
 }
 
 <!DOCTYPE html>
@@ -18,68 +23,104 @@
     <link rel="stylesheet" href="@themeLink" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SmartClinic.Web.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/navigation-premium.css" asp-append-version="true" />
 </head>
-<body>
+<body class="app-body controller-@currentController.ToLowerInvariant()">
+    <a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
     <header class="sticky-top">
-        <nav class="navbar navbar-expand-xl navbar-dark smartclinic-navbar shadow-sm mb-4">
+        <nav class="navbar navbar-expand-xl navbar-dark smartclinic-navbar">
             <div class="container-fluid">
                 <a class="navbar-brand smartclinic-brand" asp-area="" asp-controller="Home" asp-action="Index">
                     <span class="brand-mark">SC</span>
-                    <span>SmartClinic</span>
+                    <span class="brand-copy">
+                        <strong>SmartClinic</strong>
+                        <small>Clinic Management</small>
+                    </span>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#smartclinicMainNav" aria-controls="smartclinicMainNav"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div id="smartclinicMainNav" class="navbar-collapse collapse d-xl-flex justify-content-between align-items-xl-center gap-3">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("Home")" asp-area="" asp-controller="Home" asp-action="Index">แดชบอร์ด</a>
-                        </li>
-                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link @ActiveNav("Clinics")" asp-controller="Clinics" asp-action="Register">@(Context.User.IsInRole("SuperAdmin") ? "ลงทะเบียนคลินิก" : "ข้อมูลคลินิก")</a>
-                            </li>
-                        }
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("Patients")" asp-controller="Patients" asp-action="Index">ผู้ป่วย</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("MedicalRecords")" asp-controller="MedicalRecords" asp-action="Index">เวชระเบียน OPD</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("PatientMedicalProfiles")" asp-controller="PatientMedicalProfiles" asp-action="Index">เวชระเบียนผู้รับบริการ</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("Signatures")" asp-controller="Signatures" asp-action="Index">ลายเซ็น</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("Reports")" asp-controller="Reports" asp-action="Index">รายงาน</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @ActiveNav("Downloads")" asp-controller="Downloads" asp-action="Index">ดาวน์โหลด</a>
-                        </li>
-                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link @ActiveNav("ClinicUsers")" asp-controller="ClinicUsers" asp-action="Index">ผู้ใช้คลินิก</a>
-                            </li>
-                        }
+                    @if (isAuthenticated)
+                    {
+                    <ul class="navbar-nav smartclinic-main-links me-auto mb-2 mb-lg-0">
                         @if (Context.User.IsInRole("SuperAdmin"))
                         {
+                            <li class="nav-item"><a class="nav-link @ActiveNav("SystemAdmin", "Index")" data-nav-icon="OV" asp-controller="SystemAdmin" asp-action="Index">ภาพรวมระบบ</a></li>
+                            <li class="nav-item"><a class="nav-link @ActiveNav("SystemAdmin", "Clinics")" data-nav-icon="CL" asp-controller="SystemAdmin" asp-action="Clinics">คลินิกสมาชิก</a></li>
+                            <li class="nav-item"><a class="nav-link @ActiveNav("SystemAdmin", "Slips")" data-nav-icon="SL" asp-controller="SystemAdmin" asp-action="Slips">สลิปและเครดิต</a></li>
+                            <li class="nav-item"><a class="nav-link @ActiveNav("SystemAdmin", "Messages")" data-nav-icon="MS" asp-controller="SystemAdmin" asp-action="Messages">ข้อความ</a></li>
+                            <li class="nav-item"><a class="nav-link @ActiveNav("Subscriptions")" data-nav-icon="MD" asp-controller="Subscriptions" asp-action="Admin">แพ็กเกจและสื่อ</a></li>
+                            <li class="nav-item"><a class="nav-link @ActiveNav("NhssoMasters")" data-nav-icon="NH" asp-controller="NhssoMasters" asp-action="Index">ข้อมูล สปสช.</a></li>
+                            <li class="nav-item"><a class="nav-link @ActiveNav("Icd10")" data-nav-icon="IC" asp-controller="Icd10" asp-action="Index">ICD-10</a></li>
+                        }
+                        else
+                        {
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Home", "Index")" data-nav-icon="DB" asp-area="" asp-controller="Home" asp-action="Index">แดชบอร์ด</a>
+                        </li>
+                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
+                        {
                             <li class="nav-item">
-                                <a class="nav-link @ActiveNav("NhssoMasters")" asp-controller="NhssoMasters" asp-action="Index">ข้อมูลหลัก สปสช.</a>
+                                <a class="nav-link @ActiveNav("Clinics")" data-nav-icon="CL" asp-controller="Clinics" asp-action="Register">@(Context.User.IsInRole("SuperAdmin") ? "ลงทะเบียนคลินิก" : "ข้อมูลคลินิก")</a>
                             </li>
                         }
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">นโยบายความเป็นส่วนตัว</a>
+                            <a class="nav-link @ActiveNav("Patients")" data-nav-icon="PT" asp-controller="Patients" asp-action="Index">ผู้ป่วย</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("PatientInsights")" data-nav-icon="PI" asp-controller="PatientInsights" asp-action="Index">ค้นหาผู้ป่วย</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("MedicalRecords")" data-nav-icon="OP" asp-controller="MedicalRecords" asp-action="Index">OPD-Card</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Icd10")" data-nav-icon="IC" asp-controller="Icd10" asp-action="Index">ICD-10</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("MedicationLabels")" data-nav-icon="RX" asp-controller="MedicationLabels" asp-action="Index">ฉลากยา</a>
+                        </li>
+                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @ActiveNav("DrugCatalog")" data-nav-icon="RX" asp-controller="DrugCatalog" asp-action="Index">คลังยา</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @ActiveNav("DrugAdvice")" data-nav-icon="AD" asp-controller="DrugAdvice" asp-action="Index">คลังคำแนะนำ</a>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("WoundCare")" data-nav-icon="WC" asp-controller="WoundCare" asp-action="Index">ทำแผล</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("PatientMedicalProfiles")" data-nav-icon="MR" asp-controller="PatientMedicalProfiles" asp-action="Index">เวชระเบียนผู้รับบริการ</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Signatures")" data-nav-icon="SG" asp-controller="Signatures" asp-action="Index">ลายเซ็น</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Reports")" data-nav-icon="RP" asp-controller="Reports" asp-action="Index">รายงาน</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Downloads")" data-nav-icon="DL" asp-controller="Downloads" asp-action="Index">ดาวน์โหลด</a>
+                        </li>
+                        @if (Context.User.IsInRole("SuperAdmin") || Context.User.IsInRole("AdminClinic"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @ActiveNav("ClinicUsers")" data-nav-icon="US" asp-controller="ClinicUsers" asp-action="Index">ผู้ใช้คลินิก</a>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link @ActiveNav("Home", "Privacy")" data-nav-icon="PV" asp-area="" asp-controller="Home" asp-action="Privacy">ความเป็นส่วนตัว</a>
+                        </li>
+                        }
                     </ul>
+                    }
                     <form class="nav-tool d-flex align-items-center gap-2" asp-controller="Theme" asp-action="Set" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                        <label class="visually-hidden" for="themeSelect">Theme</label>
+                        <label class="theme-label" for="themeSelect">ธีม</label>
                         <select id="themeSelect" name="theme" class="form-select form-select-sm theme-select" onchange="this.form.submit()">
                             @foreach (var theme in themeOptions)
                             {
@@ -90,7 +131,7 @@
                     <div class="nav-account d-flex gap-2">
                         @if (isAuthenticated)
                         {
-                            <span class="user-chip">@displayName</span>
+                            <span class="user-chip"><span class="user-avatar">@displayName.Substring(0, 1).ToUpperInvariant()</span>@displayName</span>
                             <a class="btn btn-sm btn-outline-light" asp-controller="Account" asp-action="ChangePassword">เปลี่ยนรหัสผ่าน</a>
                             <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
                                 @Html.AntiForgeryToken()
@@ -99,6 +140,7 @@
                         }
                         else
                         {
+                            <a class="btn btn-sm btn-light" asp-controller="Access" asp-action="Register">สมัครใช้งาน</a>
                             <a class="btn btn-sm btn-outline-light" asp-controller="Account" asp-action="Login">เข้าสู่ระบบ</a>
                         }
                     </div>
@@ -107,21 +149,22 @@
         </nav>
     </header>
     <div class="app-shell container-fluid px-3 px-lg-4">
-        <main role="main" class="pb-3">
+        <main id="main-content" role="main" class="app-main pb-3" tabindex="-1">
             @RenderBody()
         </main>
     </div>
 
     <partial name="_StatusModal" />
 
-    <footer class="border-top footer text-body-secondary py-3 mt-4">
+    <footer class="app-footer footer text-body-secondary py-3 mt-4">
         <div class="container-fluid px-3 px-lg-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-            <div>&copy; 2569 - SmartClinic</div>
-            <div class="small">Ready with Bootswatch theme support</div>
+            <div class="d-flex align-items-center gap-2"><span class="footer-mark">SC</span><span>&copy; 2569 SmartClinic</span></div>
+            <div class="small"><span class="footer-status-dot"></span> ระบบบริหารจัดการคลินิกพร้อมใช้งาน</div>
         </div>
     </footer>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/navigation-premium.js" asp-append-version="true"></script>
 
     @if ((TempData["StatusModal"] as string) == "password-changed")
     {

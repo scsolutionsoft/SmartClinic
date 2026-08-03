@@ -4,6 +4,8 @@ namespace SmartClinic.Web.Models;
 
 public class ApplicationUser : IdentityUser
 {
+    public string? NamePrefix { get; set; }
+
     public string? FullName { get; set; }
 
     public string? ClinicCode { get; set; }

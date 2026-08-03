@@ -11,6 +11,22 @@ namespace SmartClinic.Web.Controllers;
 [Authorize(Roles = "SuperAdmin,AdminClinic")]
 public class ClinicsController : Controller
 {
+    private const long MaximumLogoSize = 5 * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedLogoContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    };
+
+    private static readonly Dictionary<string, string> LogoExtensionsByContentType = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["image/jpeg"] = ".jpg",
+        ["image/png"] = ".png",
+        ["image/webp"] = ".webp"
+    };
+
     private static readonly HashSet<string> AllowedThemes = new(StringComparer.OrdinalIgnoreCase)
     {
         "lux",
@@ -33,12 +49,21 @@ public class ClinicsController : Controller
     private readonly ApplicationDbContext dbContext;
     private readonly UserManager<ApplicationUser> userManager;
     private readonly RoleManager<IdentityRole> roleManager;
+    private readonly IWebHostEnvironment webHostEnvironment;
+    private readonly ILogger<ClinicsController> logger;
 
-    public ClinicsController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+    public ClinicsController(
+        ApplicationDbContext dbContext,
+        UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager,
+        IWebHostEnvironment webHostEnvironment,
+        ILogger<ClinicsController> logger)
     {
         this.dbContext = dbContext;
         this.userManager = userManager;
         this.roleManager = roleManager;
+        this.webHostEnvironment = webHostEnvironment;
+        this.logger = logger;
     }
 
     [HttpGet]
@@ -76,30 +101,53 @@ public class ClinicsController : Controller
             }
 
             model.SelectedClinicCode = currentClinic.ClinicCode;
-            model.ClinicName = currentClinic.ClinicName;
+            model.ClinicName = model.ClinicName?.Trim() ?? string.Empty;
             model.Address = model.Address?.Trim() ?? string.Empty;
+            model.OpeningHours = model.OpeningHours?.Trim() ?? string.Empty;
             model.IsEditMode = true;
             model.CanCreateClinic = false;
             model.CurrentLogoPath = currentClinic.LogoPath;
+            ValidateLogo(model.Logo);
 
             if (!ModelState.IsValid)
             {
                 return View(await BuildRegistrationViewModel(model));
             }
 
+            currentClinic.ClinicName = model.ClinicName;
             currentClinic.FullName = model.FullName.Trim();
             currentClinic.PhoneNumber = model.PhoneNumber.Trim();
             currentClinic.Email = model.Email.Trim();
             currentClinic.Address = model.Address;
+            currentClinic.OpeningHours = model.OpeningHours;
             currentClinic.Theme = AllowedThemes.Contains(model.Theme) ? model.Theme.ToLowerInvariant() : currentClinic.Theme;
 
-            var logoPath = await SaveLogo(model.Logo);
-            if (!string.IsNullOrWhiteSpace(logoPath))
+            string? logoPath = null;
+            try
             {
-                currentClinic.LogoPath = logoPath;
+                logoPath = await SaveLogo(model.Logo);
+                if (!string.IsNullOrWhiteSpace(logoPath))
+                {
+                    currentClinic.LogoPath = logoPath;
+                }
+
+                await dbContext.SaveChangesAsync();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DbUpdateException)
+            {
+                DeleteNewLogo(logoPath);
+                logger.LogError(
+                    exception,
+                    "Unable to update clinic {ClinicCode} logo/profile.",
+                    currentClinic.ClinicCode);
+                ModelState.AddModelError(
+                    nameof(model.Logo),
+                    "ไม่สามารถบันทึกโลโก้ได้ กรุณาตรวจสอบไฟล์แล้วลองอีกครั้ง");
+                ViewData["ClinicError"] = "ไม่สามารถบันทึกโลโก้ได้ กรุณาใช้ไฟล์ JPG, PNG หรือ WEBP ขนาดไม่เกิน 5 MB แล้วลองอีกครั้ง";
+                model.CurrentLogoPath = currentClinic.LogoPath;
+                return View(await BuildRegistrationViewModel(model));
             }
 
-            await dbContext.SaveChangesAsync();
             TempData["ClinicStatus"] = "updated";
             return RedirectToAction(nameof(Register));
         }
@@ -116,6 +164,7 @@ public class ClinicsController : Controller
         model.ClinicName = selectedMaster?.ClinicName ?? string.Empty;
         model.Address = selectedMaster?.Address ?? string.Empty;
         model.CanCreateClinic = true;
+        ValidateLogo(model.Logo);
 
         if (!ModelState.IsValid)
         {
@@ -138,6 +187,7 @@ public class ClinicsController : Controller
             FullName = model.FullName,
             PhoneNumber = model.PhoneNumber,
             Address = selectedMaster.Address,
+            OpeningHours = model.OpeningHours.Trim(),
             Email = model.Email,
             RegisteredBy = model.FullName,
             Theme = AllowedThemes.Contains(model.Theme) ? model.Theme.ToLowerInvariant() : "lux"
@@ -186,12 +236,28 @@ public class ClinicsController : Controller
 
     private async Task<Clinic?> GetCurrentUserClinic(ApplicationUser? currentUser)
     {
-        if (string.IsNullOrWhiteSpace(currentUser?.ClinicCode))
+        if (currentUser is null)
         {
             return null;
         }
 
-        return await dbContext.Clinics.FirstOrDefaultAsync(x => x.ClinicCode == currentUser.ClinicCode);
+        var clinicCode = currentUser.ClinicCode?.Trim();
+        if (!string.IsNullOrWhiteSpace(clinicCode))
+        {
+            var clinic = await dbContext.Clinics.FirstOrDefaultAsync(x => x.ClinicCode == clinicCode);
+            if (clinic is not null)
+            {
+                return clinic;
+            }
+        }
+
+        var userNameClinicCode = currentUser.UserName?.Trim();
+        if (string.IsNullOrWhiteSpace(userNameClinicCode))
+        {
+            return null;
+        }
+
+        return await dbContext.Clinics.FirstOrDefaultAsync(x => x.ClinicCode == userNameClinicCode);
     }
 
     private static ClinicRegistrationViewModel MapClinicToModel(Clinic clinic, bool canCreateClinic)
@@ -204,6 +270,7 @@ public class ClinicsController : Controller
             PhoneNumber = clinic.PhoneNumber,
             Email = clinic.Email,
             Address = clinic.Address,
+            OpeningHours = clinic.OpeningHours,
             Theme = clinic.Theme,
             IsEditMode = true,
             CanCreateClinic = canCreateClinic,
@@ -211,21 +278,90 @@ public class ClinicsController : Controller
         };
     }
 
-    private static async Task<string?> SaveLogo(IFormFile? logo)
+    private void ValidateLogo(IFormFile? logo)
+    {
+        if (logo is null || logo.Length == 0)
+        {
+            return;
+        }
+
+        if (logo.Length > MaximumLogoSize)
+        {
+            ModelState.AddModelError(nameof(ClinicRegistrationViewModel.Logo), "ไฟล์โลโก้ต้องมีขนาดไม่เกิน 5 MB");
+        }
+
+        if (!AllowedLogoContentTypes.Contains(logo.ContentType))
+        {
+            ModelState.AddModelError(nameof(ClinicRegistrationViewModel.Logo), "รองรับโลโก้เฉพาะไฟล์ JPG, PNG และ WEBP");
+        }
+    }
+
+    private async Task<string?> SaveLogo(IFormFile? logo)
     {
         if (logo is null || logo.Length == 0)
         {
             return null;
         }
 
-        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "logos");
-        Directory.CreateDirectory(uploadsFolder);
-        var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(logo.FileName)}";
-        var filePath = Path.Combine(uploadsFolder, fileName);
+        if (!LogoExtensionsByContentType.TryGetValue(logo.ContentType, out var extension))
+        {
+            throw new IOException($"Unsupported logo content type: {logo.ContentType}");
+        }
 
-        await using var stream = System.IO.File.Create(filePath);
-        await logo.CopyToAsync(stream);
+        var webRootPath = string.IsNullOrWhiteSpace(webHostEnvironment.WebRootPath)
+            ? Path.Combine(webHostEnvironment.ContentRootPath, "wwwroot")
+            : webHostEnvironment.WebRootPath;
+        var uploadsFolder = Path.Combine(webRootPath, "uploads", "logos");
+        Directory.CreateDirectory(uploadsFolder);
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+        var temporaryPath = $"{filePath}.uploading";
+
+        try
+        {
+            await using (var stream = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                useAsync: true))
+            {
+                await logo.CopyToAsync(stream);
+            }
+
+            System.IO.File.Move(temporaryPath, filePath);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(temporaryPath))
+            {
+                System.IO.File.Delete(temporaryPath);
+            }
+        }
+
         return $"/uploads/logos/{fileName}";
+    }
+
+    private void DeleteNewLogo(string? logoPath)
+    {
+        if (string.IsNullOrWhiteSpace(logoPath))
+        {
+            return;
+        }
+
+        var webRootPath = string.IsNullOrWhiteSpace(webHostEnvironment.WebRootPath)
+            ? Path.Combine(webHostEnvironment.ContentRootPath, "wwwroot")
+            : webHostEnvironment.WebRootPath;
+        var relativePath = logoPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(webRootPath, relativePath));
+        var logoFolder = Path.GetFullPath(Path.Combine(webRootPath, "uploads", "logos"));
+
+        if (fullPath.StartsWith(logoFolder, StringComparison.OrdinalIgnoreCase)
+            && System.IO.File.Exists(fullPath))
+        {
+            System.IO.File.Delete(fullPath);
+        }
     }
 
     private async Task<ClinicRegistrationViewModel> BuildRegistrationViewModel(ClinicRegistrationViewModel? model = null)

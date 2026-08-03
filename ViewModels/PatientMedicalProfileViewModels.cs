@@ -109,6 +109,8 @@ public class PatientMedicalProfilesDashboardViewModel
 
     public IReadOnlyList<PatientMedicalProfileItemViewModel> Profiles { get; set; } = Array.Empty<PatientMedicalProfileItemViewModel>();
 
+    public string SearchTerm { get; set; } = string.Empty;
+
     public string? StatusMessage { get; set; }
 }
 
@@ -179,7 +181,7 @@ public class PatientMedicalProfileEditViewModel
     [Display(Name = "เปลี่ยนไฟล์ PDF เวชระเบียนผู้รับบริการ")]
     public IFormFile? SourcePdfFile { get; set; }
 
-    public string CurrentPdfFileName { get; set; } = string.Empty;
+    public string? CurrentPdfFileName { get; set; }
 
     public bool HasPdfFile { get; set; }
 }
